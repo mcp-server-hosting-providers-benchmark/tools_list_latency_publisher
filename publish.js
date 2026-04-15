@@ -384,7 +384,7 @@ function fmt_errors(p) {
     .join(", ");
 }
 
-// Methodology block displayed above the table
+// Methodology block displayed below the table
 function methodology_block(period, measurement_locations) {
   const from = period.from ? new Date(period.from).toLocaleDateString("en-GB", { day:"numeric", month:"short", year:"numeric" }) : "?";
   const to   = period.to   ? new Date(period.to  ).toLocaleDateString("en-GB", { day:"numeric", month:"short", year:"numeric" }) : "?";
@@ -393,10 +393,11 @@ function methodology_block(period, measurement_locations) {
   ).join(" &nbsp;·&nbsp; ");
 
   return `<div class="method">
-  <strong>What is measured:</strong> the time a remote MCP server takes to respond to a tools/list request, in milliseconds<br>
-  <strong>Measurement cadence:</strong> every 2 hours<br>
-  <strong>Period:</strong> ${from} – ${to}<br>
-  <strong>Measured from:</strong> ${loc_links}
+  <strong>Metric:</strong> tools/list response time in milliseconds — from the moment the MCP client sends the HTTP request to the moment it receives the response from the remote MCP server. Cold start included.<br>
+  <strong>Method:</strong> the same MCP server is deployed unchanged on each hosting provider. Observed latency differences reflect the hosting infrastructure, not the server logic.<br>
+  <strong>Period:</strong> ${from} – ${to} &nbsp;·&nbsp; <strong>Cadence:</strong> every 2 hours<br>
+  <strong>Measured from:</strong> ${loc_links}<br>
+  <strong>What this benchmark does not measure:</strong> warm-start latency, availability, other request types, or performance under load.
 </div>`;
 }
 
@@ -486,8 +487,8 @@ write(join(out_dir, "index.html"), html_page({
   meta_desc: "Latency benchmark (tools/list response time) for remote MCP server hosting providers: Cloudflare Workers, Vercel, Netlify, Railway, Supabase, Fermyon, Val.town, Render. Measured from multiple locations worldwide, sorted by P50.",
   jsonld,
   body: `<h1>Remote MCP Server Hosting Provider Latency Benchmark</h1>
-${methodology_block(period_30d, Object.values(origin_map))}
 ${summary_table(stats_30d)}
+${methodology_block(period_30d, Object.values(origin_map))}
 <nav class="nav">
   <a href="${u('/remote-mcp-server-hosting-provider/')}">Providers</a>
   <a href="${u('/tools-list-latency-from/')}">Origins</a>
@@ -518,7 +519,6 @@ for (const p of stats_30d) {
     body: `<p class="back"><a href="${u('/')}">← Benchmark home</a></p>
 <h1>${p.display_name}</h1>
 <p class="meta">Remote MCP server hosting provider · Server: ${server_loc}</p>
-${methodology_block(period_30d, Object.values(origin_map))}
 
 <table>
   <thead><tr>
@@ -547,6 +547,7 @@ ${methodology_block(period_30d, Object.values(origin_map))}
   <tbody>${runs_rows}</tbody>
 </table>
 
+${methodology_block(period_30d, Object.values(origin_map))}
 <nav class="nav">
   <a href="${u('/')}">← All providers</a>
   <a href="${u('/llms.json')}">JSON data</a>
@@ -583,9 +584,9 @@ for (const { geo, runs } of Object.values(origin_map)) {
     jsonld: null,
     body: `<p class="back"><a href="${u('/')}">← Benchmark home</a></p>
 <h1>Remote MCP Server Hosting Provider Latency Benchmark</h1>
-${methodology_block(eval_period(runs), [{ geo }])}
 <p class="origins" style="margin-bottom:12px">Other measurement locations: ${origins_nav(slug)}</p>
 ${summary_table(stats, true)}
+${methodology_block(eval_period(runs), [{ geo }])}
 <nav class="nav">
   <a href="${u('/')}">All origins</a>
   <a href="${u('/llms.json')}">JSON data</a>
