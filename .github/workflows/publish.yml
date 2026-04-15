@@ -36,7 +36,7 @@ jobs:
             results
 
       - name: Run publisher
-        run: node publish.js --results ./results --out ./out
+        run: node publish.js --results ./results --out ./out --base /tools_list_latency_publisher
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

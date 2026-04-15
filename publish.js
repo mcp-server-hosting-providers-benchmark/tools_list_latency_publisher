@@ -14,7 +14,7 @@
  *   out/tools-list-latency-from/[city-country].html     — summary filtered by pinger origin
  *   out/tools-list-latency-from/[city-country].json     — JSON filtered by pinger origin
  *
- * Usage: node publish.js [--results <path>] [--out <path>]
+ * Usage: node publish.js [--results <path>] [--out <path>] [--base <url-prefix>]
  */
 
 import { readdirSync, readFileSync, writeFileSync, mkdirSync } from "fs";
@@ -26,6 +26,10 @@ const flag = (name) => { const i = args.indexOf(name); return i !== -1 ? args[i 
 
 const results_dir = flag("--results") ?? join(import.meta.dirname, "results");
 const out_dir     = flag("--out")     ?? join(import.meta.dirname, "out");
+// Base URL prefix for all internal links (e.g. "/tools_list_latency_publisher" for GitHub Pages subdirectory).
+// Leave empty when the site is served from the root.
+const BASE = (flag("--base") ?? "").replace(/\/$/, "");
+const u = (path) => `${BASE}${path}`;
 
 // --- Percentile ---
 function percentile(sorted_asc, p) {
@@ -239,7 +243,7 @@ function write(path, content) {
 write(join(out_dir, "llms.txt"),
 `This site publishes a latency benchmark for remote MCP server hosting providers.
 Metric: tools/list response time in milliseconds, cold start included, measured every 2 hours from multiple locations worldwide.
-Machine-readable data index (providers, stats, dataset URLs): /llms.json
+Machine-readable data index (providers, stats, dataset URLs): ${u("/llms.json")}
 Each entry in the index contains a dataset URL and a plain-language description of its contents.
 `);
 
@@ -247,7 +251,7 @@ Each entry in the index contains a dataset URL and a plain-language description 
 write(join(out_dir, "llms-full.txt"),
 `This site publishes a latency benchmark for remote MCP server hosting providers.
 Metric: tools/list response time in milliseconds, cold start included, measured every 2 hours from multiple locations worldwide.
-Full dataset (all providers, aggregated stats, and individual run records from the last 24 hours): /llms-full.json
+Full dataset (all providers, aggregated stats, and individual run records from the last 24 hours): ${u("/llms-full.json")}
 `);
 
 // robots.txt
@@ -258,19 +262,19 @@ const datasets = [
   {
     id: "all_origins_90d",
     description: "Aggregated latency stats (min, p50, p99, max) for all remote MCP server hosting providers. All pinger locations combined. 90-day window. Sorted by p50 ascending.",
-    url: "/llms.json"
+    url: u("/llms.json")
   },
   {
     id: "all_origins_24h_with_runs",
     description: "Same aggregated stats plus individual run records from the last 24 hours. Use this to see recent raw measurements per provider.",
-    url: "/llms-full.json"
+    url: u("/llms-full.json")
   }
 ];
 for (const { geo } of Object.values(origin_map)) {
   datasets.push({
     id: `from_${geo_slug(geo)}`,
     description: `Aggregated latency stats filtered to measurements made from ${geo_display(geo)}. 30-day window.`,
-    url: `/tools-list-latency-from/${geo_slug(geo)}.json`
+    url: u(`/tools-list-latency-from/${geo_slug(geo)}.json`)
   });
 }
 
@@ -385,11 +389,11 @@ function methodology_block(period, measurement_locations) {
   const from = period.from ? new Date(period.from).toLocaleDateString("en-GB", { day:"numeric", month:"short", year:"numeric" }) : "?";
   const to   = period.to   ? new Date(period.to  ).toLocaleDateString("en-GB", { day:"numeric", month:"short", year:"numeric" }) : "?";
   const loc_links = measurement_locations.map(({ geo }) =>
-    `<a href="/tools-list-latency-from/${geo_slug(geo)}.html">${geo_display(geo)}</a>`
-  ).join(", ");
+    `<a href="${u(`/tools-list-latency-from/${geo_slug(geo)}.html`)}">${geo_display(geo)}</a>`
+  ).join(" &nbsp;·&nbsp; ");
 
   return `<div class="method">
-  <strong>What is measured:</strong> the time a remote MCP server takes to respond to a tool discovery request (tools/list call), in milliseconds<br>
+  <strong>What is measured:</strong> the time a remote MCP server takes to respond to a tools/list request, in milliseconds<br>
   <strong>Measurement cadence:</strong> every 2 hours<br>
   <strong>Period:</strong> ${from} – ${to}<br>
   <strong>Measured from:</strong> ${loc_links}
@@ -402,7 +406,7 @@ function summary_table(providers, provider_link = true) {
     const n   = p.n_runs;
     const loc = server_location_display(p.server_geos);
     const name_cell = provider_link
-      ? `<a href="/remote-mcp-server-hosting-provider/${p.slug}.html">${p.display_name}</a>`
+      ? `<a href="${u(`/remote-mcp-server-hosting-provider/${p.slug}.html`)}">${p.display_name}</a>`
       : p.display_name;
     const err_cell = p.runs_error > 0
       ? `<span class="err">${fmt_errors(p)}</span>`
@@ -418,14 +422,19 @@ function summary_table(providers, provider_link = true) {
   }).join("\n");
 
   return `<table>
-  <thead><tr>
-    <th scope="col">Hosting provider<br><span style="font-weight:400;color:#888">Server location</span></th>
+  <thead>
+  <tr>
+    <th rowspan="2" scope="col" style="text-align:left;width:38%;vertical-align:bottom">Hosting provider<br><span style="font-weight:400;color:#888">Server location</span></th>
+    <th colspan="4" scope="colgroup" style="text-align:center;border-bottom:1px solid #ccc;font-size:10px;font-weight:600;color:#555;padding-bottom:2px">tools/list response time</th>
+    <th rowspan="2" scope="col" style="vertical-align:bottom">Failed<br><span style="font-weight:400;color:#888">runs</span></th>
+  </tr>
+  <tr>
     <th scope="col">Min<br><span style="font-weight:400;color:#888">ms</span></th>
     <th scope="col">P50<br><span style="font-weight:400;color:#888">ms</span></th>
     <th scope="col">P99<br><span style="font-weight:400;color:#888">ms</span></th>
     <th scope="col">Max<br><span style="font-weight:400;color:#888">ms</span></th>
-    <th scope="col">Failed<br><span style="font-weight:400;color:#888">runs</span></th>
-  </tr></thead>
+  </tr>
+  </thead>
   <tbody>${rows}</tbody>
 </table>`;
 }
@@ -436,7 +445,7 @@ function origins_nav(current_slug) {
     const label = geo_short(geo);
     return slug === current_slug
       ? `<strong>${label}</strong>`
-      : `<a href="/tools-list-latency-from/${slug}.html">${label}</a>`;
+      : `<a href="${u(`/tools-list-latency-from/${slug}.html`)}">${label}</a>`;
   });
   return links.join(" · ");
 }
@@ -465,7 +474,7 @@ const jsonld = JSON.stringify({
   "@type": "Dataset",
   "name": "Remote MCP Server Hosting Provider Latency Benchmark",
   "description": "tools/list response time benchmark for remote MCP server hosting providers — cold start included — measured from multiple locations worldwide",
-  "url": "/",
+  "url": u("/"),
   "temporalCoverage": `${period_30d.from ?? ""}/${period_30d.to ?? ""}`,
   "measurementMethod": "Automated tools/list call every 2 hours from multiple geographic locations",
   "variableMeasured": "tools/list latency in milliseconds"
@@ -481,10 +490,10 @@ write(join(out_dir, "index.html"), html_page({
 ${methodology_block(period_30d, Object.values(origin_map))}
 ${summary_table(stats_30d)}
 <nav class="nav">
-  <a href="/remote-mcp-server-hosting-provider/">Providers</a>
-  <a href="/tools-list-latency-from/">Origins</a>
-  <a href="/llms.json">JSON (90d)</a>
-  <a href="/llms-full.json">JSON + runs (24h)</a>
+  <a href="${u('/remote-mcp-server-hosting-provider/')}">Providers</a>
+  <a href="${u('/tools-list-latency-from/')}">Origins</a>
+  <a href="${u('/llms.json')}">JSON (90d)</a>
+  <a href="${u('/llms-full.json')}">JSON + runs (24h)</a>
 </nav>`
 }));
 
@@ -507,7 +516,7 @@ for (const p of stats_30d) {
     title: `${p.display_name} — Remote MCP Server Hosting Latency`,
     meta_desc: `tools/list response time benchmark for ${p.display_name} remote MCP server hosting. Server: ${server_loc}. Min, P50, P99, Max over the measurement period.`,
     jsonld: null,
-    body: `<p class="back"><a href="/">← Benchmark home</a></p>
+    body: `<p class="back"><a href="${u('/')}">← Benchmark home</a></p>
 <h1>${p.display_name}</h1>
 <p class="meta">Remote MCP server hosting provider · Server: ${server_loc}</p>
 ${methodology_block(period_30d, Object.values(origin_map))}
@@ -540,26 +549,26 @@ ${methodology_block(period_30d, Object.values(origin_map))}
 </table>
 
 <nav class="nav">
-  <a href="/">← All providers</a>
-  <a href="/llms.json">JSON data</a>
+  <a href="${u('/')}">← All providers</a>
+  <a href="${u('/llms.json')}">JSON data</a>
 </nav>`
   }));
 }
 
 // Provider index page
 const provider_index_rows = stats_30d.map(p =>
-  `<li><a href="/remote-mcp-server-hosting-provider/${p.slug}.html">${p.display_name}</a> — ${server_location_display(p.server_geos)}</li>`
+  `<li><a href="${u(`/remote-mcp-server-hosting-provider/${p.slug}.html`)}">${p.display_name}</a> — ${server_location_display(p.server_geos)}</li>`
 ).join("\n");
 
 write(join(out_dir, "remote-mcp-server-hosting-provider", "index.html"), html_page({
   title: "Remote MCP Server Hosting Providers — Latency Benchmark",
   meta_desc: "List of remote MCP server hosting providers included in the latency benchmark.",
   jsonld: null,
-  body: `<p class="back"><a href="/">← Benchmark home</a></p>
+  body: `<p class="back"><a href="${u('/')}">← Benchmark home</a></p>
 <h1>Remote MCP Server Hosting Providers</h1>
 <p class="meta">Click a provider to see detailed latency stats and recent runs.</p>
 <ul style="margin-top:12px;line-height:2">${provider_index_rows}</ul>
-<nav class="nav"><a href="/">← Back</a></nav>`
+<nav class="nav"><a href="${u('/')}">← Back</a></nav>`
 }));
 
 // --- Per-origin pages ---
@@ -573,34 +582,34 @@ for (const { geo, runs } of Object.values(origin_map)) {
     title: `Remote MCP Server Hosting Latency — from ${display}`,
     meta_desc: `tools/list response time benchmark for remote MCP server hosting providers, measured from ${display}. Sorted by P50.`,
     jsonld: null,
-    body: `<p class="back"><a href="/">← Benchmark home</a></p>
+    body: `<p class="back"><a href="${u('/')}">← Benchmark home</a></p>
 <h1>Remote MCP Server Hosting Provider Latency Benchmark</h1>
 <p class="meta">Sorted by P50 ascending — lower is better</p>
 ${methodology_block(eval_period(runs), [{ geo }])}
 <p class="origins" style="margin-bottom:12px">Other measurement locations: ${origins_nav(slug)}</p>
 ${summary_table(stats, true)}
 <nav class="nav">
-  <a href="/">All origins</a>
-  <a href="/llms.json">JSON data</a>
-  <a href="/tools-list-latency-from/${slug}.json">JSON (this origin)</a>
+  <a href="${u('/')}">All origins</a>
+  <a href="${u('/llms.json')}">JSON data</a>
+  <a href="${u(`/tools-list-latency-from/${slug}.json`)}">JSON (this origin)</a>
 </nav>`
   }));
 }
 
 // Origins index page
 const origin_index_rows = Object.values(origin_map).map(({ geo }) =>
-  `<li><a href="/tools-list-latency-from/${geo_slug(geo)}.html">${geo_display(geo)}</a></li>`
+  `<li><a href="${u(`/tools-list-latency-from/${geo_slug(geo)}.html`)}">${geo_display(geo)}</a></li>`
 ).join("\n");
 
 write(join(out_dir, "tools-list-latency-from", "index.html"), html_page({
   title: "Latency by Pinger Origin — Remote MCP Server Hosting Benchmark",
   meta_desc: "Browse remote MCP server hosting provider latency results filtered by the geographic location of the measurement pinger.",
   jsonld: null,
-  body: `<p class="back"><a href="/">← Benchmark home</a></p>
+  body: `<p class="back"><a href="${u('/')}">← Benchmark home</a></p>
 <h1>Latency by Pinger Origin</h1>
 <p class="meta">Select a location to see latency results measured from that geographic region.</p>
 <ul style="margin-top:12px;line-height:2">${origin_index_rows}</ul>
-<nav class="nav"><a href="/">← Back</a></nav>`
+<nav class="nav"><a href="${u('/')}">← Back</a></nav>`
 }));
 
 process.stderr.write(`\nDone. Output written to ${out_dir}\n`);
