@@ -1,0 +1,48 @@
+name: publish
+
+on:
+  schedule:
+    - cron: "30 */2 * * *"   # toutes les 2h à :30, après le pinger (:00)
+  workflow_dispatch:           # déclenchement manuel
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout publisher
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Fetch pinger results (data branch)
+        run: |
+          git clone \
+            --branch data \
+            --single-branch \
+            --depth 1000 \
+            https://github.com/mcp-server-hosting-providers-benchmark/tools_list_latency_measurer.git \
+            results
+
+      - name: Run publisher
+        run: node publish.js --results ./results --out ./out
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: out/
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
