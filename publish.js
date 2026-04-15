@@ -476,7 +476,7 @@ const jsonld = JSON.stringify({
   "description": "tools/list response time benchmark for remote MCP server hosting providers — cold start included — measured from multiple locations worldwide",
   "url": u("/"),
   "temporalCoverage": `${period_30d.from ?? ""}/${period_30d.to ?? ""}`,
-  "measurementMethod": "Automated tools/list call every 2 hours from multiple geographic locations",
+  "measurementMethod": "Automated tools/list request every 2 hours from multiple geographic locations",
   "variableMeasured": "tools/list latency in milliseconds"
 }, null, 2);
 
