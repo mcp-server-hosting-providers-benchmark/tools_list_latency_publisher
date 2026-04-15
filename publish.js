@@ -486,7 +486,6 @@ write(join(out_dir, "index.html"), html_page({
   meta_desc: "Latency benchmark (tools/list response time) for remote MCP server hosting providers: Cloudflare Workers, Vercel, Netlify, Railway, Supabase, Fermyon, Val.town, Render. Measured from multiple locations worldwide, sorted by P50.",
   jsonld,
   body: `<h1>Remote MCP Server Hosting Provider Latency Benchmark</h1>
-<p class="meta">Sorted by P50 ascending — lower is better</p>
 ${methodology_block(period_30d, Object.values(origin_map))}
 ${summary_table(stats_30d)}
 <nav class="nav">
@@ -580,11 +579,10 @@ for (const { geo, runs } of Object.values(origin_map)) {
 
   write(join(out_dir, "tools-list-latency-from", `${slug}.html`), html_page({
     title: `Remote MCP Server Hosting Latency — from ${display}`,
-    meta_desc: `tools/list response time benchmark for remote MCP server hosting providers, measured from ${display}. Sorted by P50.`,
+    meta_desc: `tools/list response time benchmark for remote MCP server hosting providers, measured from ${display}.`,
     jsonld: null,
     body: `<p class="back"><a href="${u('/')}">← Benchmark home</a></p>
 <h1>Remote MCP Server Hosting Provider Latency Benchmark</h1>
-<p class="meta">Sorted by P50 ascending — lower is better</p>
 ${methodology_block(eval_period(runs), [{ geo }])}
 <p class="origins" style="margin-bottom:12px">Other measurement locations: ${origins_nav(slug)}</p>
 ${summary_table(stats, true)}
