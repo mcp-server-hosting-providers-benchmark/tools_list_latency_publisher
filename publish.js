@@ -423,8 +423,8 @@ function llm_cta_block() {
   const claude_url  = `https://claude.ai/new?q=${encoded}`;
   const chatgpt_url = `https://chatgpt.com/?q=${encoded}`;
   return `<p class="llm-cta">Not speaking English?<br>
-  <a class="claude"  href="${claude_url}"  target="_blank" rel="noopener">Analyze with Claude</a>
-  <a class="chatgpt" href="${chatgpt_url}" target="_blank" rel="noopener">Analyze with ChatGPT</a>
+  <a class="claude"  href="${claude_url}"  target="_blank" rel="noopener">Claude</a>
+  <a class="chatgpt" href="${chatgpt_url}" target="_blank" rel="noopener">ChatGPT</a>
 </p>`;
 }
 
