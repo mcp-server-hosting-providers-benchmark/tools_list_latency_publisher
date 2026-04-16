@@ -612,7 +612,7 @@ write(join(out_dir, "remote-mcp-server-hosting-provider", "index.html"), html_pa
   body: `<p class="back"><a href="${u('/')}">← Benchmark home</a></p>
 <h1>Remote MCP Server Hosting Providers</h1>
 <p class="meta">Click a provider to see detailed latency stats and recent runs.</p>
-<ul style="margin-top:12px;line-height:2">${provider_index_rows}</ul>
+<ul style="margin-top:12px;line-height:2;padding-left:18px">${provider_index_rows}</ul>
 <nav class="nav"><a href="${u('/')}">← Back</a></nav>`
 }));
 
@@ -654,7 +654,7 @@ write(join(out_dir, "tools-list-latency-from", "index.html"), html_page({
   body: `<p class="back"><a href="${u('/')}">← Benchmark home</a></p>
 <h1>Latency by Pinger Origin</h1>
 <p class="meta">Select a location to see latency results measured from that geographic region.</p>
-<ul style="margin-top:12px;line-height:2">${origin_index_rows}</ul>
+<ul style="margin-top:12px;line-height:2;padding-left:18px">${origin_index_rows}</ul>
 <nav class="nav"><a href="${u('/')}">← Back</a></nav>`
 }));
 
