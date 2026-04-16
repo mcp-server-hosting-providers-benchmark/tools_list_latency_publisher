@@ -95,15 +95,15 @@ function server_location_display(server_geos) {
 
 // --- Pinger platform helpers ---
 // Extrait le domaine de pinger_source_url et le traduit en nom lisible.
-// github.com → "GitHub Actions" · gitlab.com → "GitLab CI" · null → null
+// github.com → "GitHub Actions" · gitlab.com → "GitLab CI" · null → "Local machine"
 function pinger_platform(source_url) {
-  if (!source_url) return null;
+  if (!source_url) return "Local machine";
   try {
     const host = new URL(source_url).hostname;
     if (host === "github.com") return "GitHub Actions";
     if (host === "gitlab.com") return "GitLab CI";
     return host;
-  } catch { return null; }
+  } catch { return "Local machine"; }
 }
 
 // --- Provider display helpers ---
@@ -233,7 +233,11 @@ for (const run of eff_30d) {
   if (!origin_map[key]) origin_map[key] = { geo: run.client_geo, runs: [], pinger_source_url: run.pinger_source_url ?? null };
   origin_map[key].runs.push(run);
 }
-const pinger_locations = Object.values(origin_map).map(o => geo_short(o.geo));
+const pinger_locations = Object.values(origin_map).map(o => ({
+  location: geo_display(o.geo),
+  platform: pinger_platform(o.pinger_source_url),
+  source_url: o.pinger_source_url ?? null,
+}));
 
 // Per-provider 24h runs (for detail pages)
 const runs_24h_by_provider = {};
@@ -409,9 +413,7 @@ function methodology_block(period, measurement_locations) {
   const to   = period.to   ? new Date(period.to  ).toLocaleDateString("en-GB", { day:"numeric", month:"short", year:"numeric" }) : "?";
   const loc_links = measurement_locations.map(({ geo, pinger_source_url }) => {
     const platform = pinger_platform(pinger_source_url);
-    const label = platform
-      ? `${geo_display(geo)} <span style="font-weight:400;color:#888">(${platform})</span>`
-      : geo_display(geo);
+    const label = `${geo_display(geo)} <span style="font-weight:400;color:#888">(${platform})</span>`;
     return `<a href="${u(`/tools-list-latency-from/${geo_slug(geo)}.html`)}">${label}</a>`;
   }).join(" &nbsp;·&nbsp; ");
 
@@ -619,7 +621,7 @@ for (const { geo, runs, pinger_source_url } of Object.values(origin_map)) {
     jsonld: null,
     body: `<p class="back"><a href="${u('/')}">← Benchmark home</a></p>
 <h1>Remote MCP Server Hosting Provider Latency Benchmark</h1>
-<p class="meta">Measured from: <strong>${display}</strong>${platform ? ` &nbsp;·&nbsp; ${platform}` : ""}</p>
+<p class="meta">Measured from: <strong>${display}</strong> &nbsp;·&nbsp; ${platform}</p>
 <p class="origins" style="margin-bottom:12px">Other measurement locations: ${origins_nav(slug)}</p>
 ${summary_table(stats, true)}
 ${methodology_block(period, [{ geo, pinger_source_url }])}
