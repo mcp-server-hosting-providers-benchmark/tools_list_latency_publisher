@@ -30,6 +30,8 @@ const out_dir     = flag("--out")     ?? join(import.meta.dirname, "out");
 // Leave empty when the site is served from the root.
 const BASE = (flag("--base") ?? "").replace(/\/$/, "");
 const u = (path) => `${BASE}${path}`;
+// Full absolute URL of the published site (used in LLM prompt links)
+const SITE_URL = (flag("--site") ?? "https://mcp-server-hosting-providers-benchmark.github.io/tools_list_latency_publisher").replace(/\/$/, "");
 
 // --- Percentile ---
 function percentile(sorted_asc, p) {
@@ -405,9 +407,26 @@ td:first-child{text-align:left}
 .footer{font-size:11px;color:#999;margin-top:24px;padding-top:10px;border-top:1px solid #eee;line-height:1.8}
 .footer a{color:#999;text-decoration:none}
 .footer a:hover{text-decoration:underline}
+.llm-cta{font-size:12px;color:#444;margin:10px 0 14px;line-height:1.8}
+.llm-cta a{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:4px;text-decoration:none;font-weight:600;font-size:11px}
+.llm-cta a.claude{background:#d97706;color:#fff}
+.llm-cta a.chatgpt{background:#10a37f;color:#fff}
+.llm-cta a:hover{opacity:0.85}
 `.trim();
 
 function fmt(v) { return (v === null || v === undefined) ? "—" : String(v); }
+
+// LLM analysis CTA — prompt pré-rempli, l'utilisateur choisit quand l'envoyer
+function llm_cta_block() {
+  const prompt = `Fetch and analyze this remote MCP server hosting provider latency benchmark: ${SITE_URL}/llms.json\nWhich provider would you recommend and why? Answer in my language.`;
+  const encoded = encodeURIComponent(prompt);
+  const claude_url  = `https://claude.ai/new?q=${encoded}`;
+  const chatgpt_url = `https://chatgpt.com/?q=${encoded}`;
+  return `<p class="llm-cta">Not reading in English? Get this benchmark analyzed in your language:
+  <a class="claude"  href="${claude_url}"  target="_blank" rel="noopener">Analyze with Claude</a>
+  <a class="chatgpt" href="${chatgpt_url}" target="_blank" rel="noopener">Analyze with ChatGPT</a>
+</p>`;
+}
 
 // Format error_summary as a readable string: "1 timeout (>15s)"
 function fmt_errors(p) {
@@ -530,6 +549,7 @@ write(join(out_dir, "index.html"), html_page({
   meta_desc: "Latency benchmark (tools/list response time) for remote MCP server hosting providers: Cloudflare Workers, Vercel, Netlify, Railway, Supabase, Fermyon, Val.town, Render. Measured from multiple locations worldwide, sorted by P50.",
   jsonld,
   body: `<h1>Remote MCP Server Hosting Provider Latency Benchmark</h1>
+${llm_cta_block()}
 ${summary_table(stats_30d)}
 ${methodology_block(period_30d, Object.values(origin_map))}
 <nav class="nav">
