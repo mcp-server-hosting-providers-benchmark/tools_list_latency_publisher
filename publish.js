@@ -288,6 +288,66 @@ Metric: tools/list response time in milliseconds, cold start included, measured 
 Full dataset (all providers, aggregated stats, and individual run records from the last 24 hours): ${u("/llms-full.json")}
 `);
 
+// llms-narrative.txt — même données que llms-full.json mais en prose
+// Sert de contre-exemple pour comparer la qualité d'analyse LLM entre .txt et .json
+{
+  const period = eval_period(eff_24h);
+  const from_s = period.from ? new Date(period.from).toLocaleDateString("en-GB", { day:"numeric", month:"short", year:"numeric" }) : "?";
+  const to_s   = period.to   ? new Date(period.to  ).toLocaleDateString("en-GB", { day:"numeric", month:"short", year:"numeric" }) : "?";
+
+  const pingers_txt = pinger_locations
+    .map(pl => `- ${pl.location}${pl.platform ? ` (${pl.platform})` : ""}`)
+    .join("\n");
+
+  const providers_txt = stats_24h.map((p, i) => {
+    const l = p.latency_ms;
+    const loc = server_location_display(p.server_geos);
+    const runs_txt = (runs_24h_by_provider[p.name] ?? [])
+      .sort((a, b) => (b.ts ?? "").localeCompare(a.ts ?? ""))
+      .slice(0, 5)
+      .map(r => `  - ${r.ts ? r.ts.replace("T"," ").slice(0,16)+" UTC" : "?"} from ${geo_display(r.client_geo)}: ${r.ms}ms`)
+      .join("\n");
+    const stats_line = l
+      ? `min=${l.min}ms  P50=${l.p50}ms  P95=${l.p95}ms  P99=${l.p99}ms  max=${l.max}ms`
+      : "no successful runs";
+    const errors_line = p.runs_error > 0
+      ? `\nTimeouts/errors: ${p.runs_error} (${Object.entries(p.error_summary).map(([t,c])=>`${c}x ${t}`).join(", ")})`
+      : "";
+    return `### ${i+1}. ${p.display_name}\nServer location: ${loc}\nTotal runs: ${p.n_runs} (${p.runs_ok} ok${p.runs_error ? `, ${p.runs_error} errors` : ""})\nLatency: ${stats_line}${errors_line}${runs_txt ? `\nRecent runs (last 24h):\n${runs_txt}` : ""}`;
+  }).join("\n\n");
+
+  write(join(out_dir, "llms-narrative.txt"),
+`# Remote MCP Server Hosting Provider Latency Benchmark
+
+Source: ${SITE_URL}
+Last updated: ${new Date().toISOString()}
+Evaluation period: ${from_s} – ${to_s}
+Measurement cadence: every 2 hours
+
+## What is measured
+
+tools/list response time in milliseconds — from the moment the MCP client sends the HTTP request to the moment it receives the complete response from the remote MCP server. Cold start is included (the server may need to spin up before responding).
+
+## What is NOT measured
+
+Warm-start latency, individual tool call latency, server availability, performance under load, or the MCP server's own execution logic. All providers run the same identical MCP server — latency differences reflect hosting infrastructure only.
+
+## Measurement locations (pingers)
+
+${pingers_txt}
+
+## Results (sorted by P50 ascending)
+
+${providers_txt}
+
+## Percentile definitions
+
+P50 (median): half of all runs were faster than this value. Reflects typical performance.
+P95: 95% of runs were faster. 1 in 20 users experiences a wait longer than this.
+P99: 99% of runs were faster. 1 in 100 users experiences a wait longer than this. Reveals worst-case spikes.
+`);
+}
+
 // robots.txt
 write(join(out_dir, "robots.txt"), "User-agent: *\nAllow: /\n");
 
