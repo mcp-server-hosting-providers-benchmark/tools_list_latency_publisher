@@ -171,6 +171,7 @@ function aggregate(runs) {
       latency_ms: sorted.length > 0 ? {
         min: sorted[0],
         p50: percentile(sorted, 50),
+        p95: percentile(sorted, 95),
         p99: percentile(sorted, 99),
         max: sorted[sorted.length - 1]
       } : null
@@ -288,6 +289,7 @@ function provider_json_entry(p, include_runs = false) {
     runs_error: p.runs_error,
     min_ms:  p.latency_ms?.min  ?? null,
     p50_ms:  p.latency_ms?.p50  ?? null,
+    p95_ms:  p.latency_ms?.p95  ?? null,
     p99_ms:  p.latency_ms?.p99  ?? null,
     max_ms:  p.latency_ms?.max  ?? null
   };
@@ -372,6 +374,9 @@ td:first-child{text-align:left}
 .err{color:#c00}
 .method{font-size:12px;color:#444;line-height:1.8;margin-bottom:14px;padding:10px 12px;background:#f9f9f9;border-left:3px solid #ccc}
 .method a{color:#0066cc;text-decoration:none}
+.footer{font-size:11px;color:#999;margin-top:24px;padding-top:10px;border-top:1px solid #eee;line-height:1.8}
+.footer a{color:#999;text-decoration:none}
+.footer a:hover{text-decoration:underline}
 `.trim();
 
 function fmt(v) { return (v === null || v === undefined) ? "—" : String(v); }
@@ -393,10 +398,13 @@ function methodology_block(period, measurement_locations) {
   ).join(" &nbsp;·&nbsp; ");
 
   return `<div class="method">
-  <strong>Metric:</strong> tools/list response time in milliseconds — from the moment the MCP client sends the HTTP request to the moment it receives the response from the remote MCP server. Cold start included.<br>
   <strong>Method:</strong> the same MCP server is deployed unchanged on each hosting provider. Observed latency differences reflect the hosting infrastructure, not the server logic.<br>
+  <strong>Metric:</strong> tools/list response time in milliseconds — from the moment the MCP client sends the HTTP request to the moment it receives the response from the remote MCP server. Cold start included.<br>
   <strong>Period:</strong> ${from} – ${to} &nbsp;·&nbsp; <strong>Cadence:</strong> every 2 hours<br>
   <strong>Measured from:</strong> ${loc_links}<br>
+  <strong>P50</strong> — median: half of all runs were faster than this value. Reflects typical performance.<br>
+  <strong>P95</strong> — 95th percentile: 95% of runs were faster. 1 in 20 users experiences a wait longer than this.<br>
+  <strong>P99</strong> — 99th percentile: 99% of runs were faster. 1 in 100 users experiences a wait longer than this. Reveals tail latency and worst-case spikes.<br>
   <strong>What this benchmark does not measure:</strong> warm-start latency, availability, other request types, or performance under load.
 </div>`;
 }
@@ -416,6 +424,7 @@ function summary_table(providers, provider_link = true) {
       <td><div class="pname">${name_cell}</div><div class="sloc">${loc}</div></td>
       <td>${fmt(lat?.min)}</td>
       <td>${fmt(lat?.p50)}<span class="n">${n} runs</span></td>
+      <td>${fmt(lat?.p95)}<span class="n">${n} runs</span></td>
       <td>${fmt(lat?.p99)}<span class="n">${n} runs</span></td>
       <td>${fmt(lat?.max)}</td>
       <td>${err_cell}</td>
@@ -426,12 +435,13 @@ function summary_table(providers, provider_link = true) {
   <thead>
   <tr>
     <th rowspan="2" scope="col" style="text-align:left;width:38%;vertical-align:bottom">Hosting provider<br><span style="font-weight:400;color:#888">Server location</span></th>
-    <th colspan="4" scope="colgroup" style="text-align:center;border-bottom:1px solid #ccc;font-size:10px;font-weight:600;color:#555;padding-bottom:2px">tools/list response time</th>
+    <th colspan="5" scope="colgroup" style="text-align:center;border-bottom:1px solid #ccc;font-size:10px;font-weight:600;color:#555;padding-bottom:2px">tools/list response time</th>
     <th rowspan="2" scope="col" style="vertical-align:bottom">Failed<br><span style="font-weight:400;color:#888">runs</span></th>
   </tr>
   <tr>
     <th scope="col">Min<br><span style="font-weight:400;color:#888">ms</span></th>
     <th scope="col">P50<br><span style="font-weight:400;color:#888">ms</span></th>
+    <th scope="col">P95<br><span style="font-weight:400;color:#888">ms</span></th>
     <th scope="col">P99<br><span style="font-weight:400;color:#888">ms</span></th>
     <th scope="col">Max<br><span style="font-weight:400;color:#888">ms</span></th>
   </tr>
@@ -464,6 +474,10 @@ ${jsonld ? `<script type="application/ld+json">\n${jsonld}\n</script>` : ""}
 </head>
 <body>
 ${body}
+<div class="footer">
+  <a href="https://github.com/mcp-server-hosting-providers-benchmark" target="_blank" rel="noopener">View source on GitHub</a>
+  &nbsp;·&nbsp; <a href="https://github.com/mcp-server-hosting-providers-benchmark/tools_list_latency_measurer/issues" target="_blank" rel="noopener">Report an issue</a>
+</div>
 </body>
 </html>`;
 }
@@ -525,6 +539,7 @@ for (const p of stats_30d) {
     <th scope="col" style="text-align:left;width:auto">Metric</th>
     <th scope="col">Min</th>
     <th scope="col">P50 (${p.n_runs} runs)</th>
+    <th scope="col">P95 (${p.n_runs} runs)</th>
     <th scope="col">P99 (${p.n_runs} runs)</th>
     <th scope="col">Max</th>
   </tr></thead>
@@ -532,6 +547,7 @@ for (const p of stats_30d) {
     <td style="text-align:left;font-size:11px;color:#666">ms</td>
     <td>${fmt(lat?.min)}</td>
     <td>${fmt(lat?.p50)}</td>
+    <td>${fmt(lat?.p95)}</td>
     <td>${fmt(lat?.p99)}</td>
     <td>${fmt(lat?.max)}</td>
   </tr></tbody>
