@@ -414,7 +414,6 @@ td:first-child{text-align:left}
 .llm-cta a{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:4px;text-decoration:none;font-weight:600;font-size:11px}
 .llm-cta a.claude{background:#d97706;color:#fff}
 .llm-cta a.chatgpt{background:#10a37f;color:#fff}
-.llm-cta a.gemini{background:#4285f4;color:#fff}
 .llm-cta a.perplexity{background:#20808d;color:#fff}
 .llm-cta a:hover{opacity:0.85}
 `.trim();
@@ -429,7 +428,6 @@ function llm_cta_block() {
   return `<p class="llm-cta">${globe} Analyser &middot; Analyze &middot; Analizar
   <a class="claude"     href="https://claude.ai/new?q=${enc}"                          target="_blank" rel="noopener" data-track="cta-claude">Claude</a>
   <a class="chatgpt"    href="https://chatgpt.com/?q=${enc}"                           target="_blank" rel="noopener" data-track="cta-chatgpt">ChatGPT</a>
-  <a class="gemini"     href="https://gemini.google.com/app?q=${enc}"                  target="_blank" rel="noopener" data-track="cta-gemini">Gemini</a>
   <a class="perplexity" href="https://www.perplexity.ai/search?q=${enc}"               target="_blank" rel="noopener" data-track="cta-perplexity">Perplexity</a>
 </p>`;
 }
