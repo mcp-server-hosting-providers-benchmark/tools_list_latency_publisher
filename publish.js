@@ -93,6 +93,19 @@ function server_location_display(server_geos) {
   return `${city ?? ""}, ${country_name(code ?? "")}`;
 }
 
+// --- Pinger platform helpers ---
+// Extrait le domaine de pinger_source_url et le traduit en nom lisible.
+// github.com → "GitHub Actions" · gitlab.com → "GitLab CI" · null → null
+function pinger_platform(source_url) {
+  if (!source_url) return null;
+  try {
+    const host = new URL(source_url).hostname;
+    if (host === "github.com") return "GitHub Actions";
+    if (host === "gitlab.com") return "GitLab CI";
+    return host;
+  } catch { return null; }
+}
+
 // --- Provider display helpers ---
 function provider_display_name(internal_name) {
   return internal_name.split("_").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
@@ -131,7 +144,8 @@ function load_runs(dir, since_ms = 0) {
         ms: r.ok ? ms : null,
         error_type,
         client_geo,
-        server_geo: get_server_geo(r)
+        server_geo: get_server_geo(r),
+        pinger_source_url: data.pinger_source_url ?? null,
       });
     }
   }
@@ -216,7 +230,7 @@ const origin_map = {};  // key → { geo, runs[] }
 for (const run of eff_30d) {
   const key = geo_key(run.client_geo);
   if (!key) continue;
-  if (!origin_map[key]) origin_map[key] = { geo: run.client_geo, runs: [] };
+  if (!origin_map[key]) origin_map[key] = { geo: run.client_geo, runs: [], pinger_source_url: run.pinger_source_url ?? null };
   origin_map[key].runs.push(run);
 }
 const pinger_locations = Object.values(origin_map).map(o => geo_short(o.geo));
@@ -393,9 +407,13 @@ function fmt_errors(p) {
 function methodology_block(period, measurement_locations) {
   const from = period.from ? new Date(period.from).toLocaleDateString("en-GB", { day:"numeric", month:"short", year:"numeric" }) : "?";
   const to   = period.to   ? new Date(period.to  ).toLocaleDateString("en-GB", { day:"numeric", month:"short", year:"numeric" }) : "?";
-  const loc_links = measurement_locations.map(({ geo }) =>
-    `<a href="${u(`/tools-list-latency-from/${geo_slug(geo)}.html`)}">${geo_display(geo)}</a>`
-  ).join(" &nbsp;·&nbsp; ");
+  const loc_links = measurement_locations.map(({ geo, pinger_source_url }) => {
+    const platform = pinger_platform(pinger_source_url);
+    const label = platform
+      ? `${geo_display(geo)} <span style="font-weight:400;color:#888">(${platform})</span>`
+      : geo_display(geo);
+    return `<a href="${u(`/tools-list-latency-from/${geo_slug(geo)}.html`)}">${label}</a>`;
+  }).join(" &nbsp;·&nbsp; ");
 
   return `<div class="method">
   <strong>Method:</strong> the same MCP server is deployed unchanged on each hosting provider. Observed latency differences reflect the hosting infrastructure, not the server logic.<br>
@@ -588,11 +606,12 @@ write(join(out_dir, "remote-mcp-server-hosting-provider", "index.html"), html_pa
 }));
 
 // --- Per-origin pages ---
-for (const { geo, runs } of Object.values(origin_map)) {
-  const stats  = aggregate(runs);
-  const slug   = geo_slug(geo);
-  const display = geo_display(geo);
-  const period  = eval_period(runs);
+for (const { geo, runs, pinger_source_url } of Object.values(origin_map)) {
+  const stats    = aggregate(runs);
+  const slug     = geo_slug(geo);
+  const display  = geo_display(geo);
+  const platform = pinger_platform(pinger_source_url);
+  const period   = eval_period(runs);
 
   write(join(out_dir, "tools-list-latency-from", `${slug}.html`), html_page({
     title: `Remote MCP Server Hosting Latency — from ${display}`,
@@ -600,9 +619,10 @@ for (const { geo, runs } of Object.values(origin_map)) {
     jsonld: null,
     body: `<p class="back"><a href="${u('/')}">← Benchmark home</a></p>
 <h1>Remote MCP Server Hosting Provider Latency Benchmark</h1>
+<p class="meta">Measured from: <strong>${display}</strong>${platform ? ` &nbsp;·&nbsp; ${platform}` : ""}</p>
 <p class="origins" style="margin-bottom:12px">Other measurement locations: ${origins_nav(slug)}</p>
 ${summary_table(stats, true)}
-${methodology_block(eval_period(runs), [{ geo }])}
+${methodology_block(period, [{ geo, pinger_source_url }])}
 <nav class="nav">
   <a href="${u('/')}">All origins</a>
   <a href="${u('/llms.json')}">JSON data</a>
