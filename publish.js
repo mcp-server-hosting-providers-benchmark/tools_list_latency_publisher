@@ -439,7 +439,7 @@ function summary_table(providers, provider_link = true) {
     <th rowspan="2" scope="col" style="vertical-align:bottom">Failed<br><span style="font-weight:400;color:#888">runs</span></th>
   </tr>
   <tr>
-    <th scope="col">Min<br><span style="font-weight:400;color:#888">ms</span></th>
+    <th scope="col" style="text-align:right">Min<br><span style="font-weight:400;color:#888">ms</span></th>
     <th scope="col">P50<br><span style="font-weight:400;color:#888">ms</span></th>
     <th scope="col">P95<br><span style="font-weight:400;color:#888">ms</span></th>
     <th scope="col">P99<br><span style="font-weight:400;color:#888">ms</span></th>
