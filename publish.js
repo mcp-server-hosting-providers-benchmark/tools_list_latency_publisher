@@ -421,14 +421,28 @@ td:first-child{text-align:left}
 function fmt(v) { return (v === null || v === undefined) ? "—" : String(v); }
 
 // LLM analysis CTA — prompt pré-rempli, l'utilisateur choisit quand l'envoyer
-function llm_cta_block() {
-  const prompt = `Fetch and analyze this remote MCP server hosting provider latency benchmark: ${SITE_URL}/llms.json\nWhich provider would you recommend and why? Answer in my language.`;
-  const enc = encodeURIComponent(prompt);
+// providers: tableau de stats (stats_30d) pour construire le prompt Perplexity inline
+function llm_cta_block(providers) {
+  // Claude + ChatGPT : peuvent fetcher l'URL directement
+  const prompt_fetch = `Fetch and analyze this remote MCP server hosting provider latency benchmark: ${SITE_URL}/llms.json\nWhich provider would you recommend and why? Answer in my language.`;
+  const enc_fetch = encodeURIComponent(prompt_fetch);
+
+  // Perplexity : ne peut pas fetcher — on embarque les données directement dans le prompt
+  const data_lines = providers.map((p, i) => {
+    const l = p.latency_ms;
+    const stats = l
+      ? `p50=${l.p50}ms p95=${l.p95}ms p99=${l.p99}ms (${p.n_runs} runs${p.runs_error ? `, ${p.runs_error} timeouts` : ""})`
+      : `no data (${p.runs_error} timeouts)`;
+    return `${i + 1}. ${p.display_name} [${server_location_display(p.server_geos)}]: ${stats}`;
+  }).join("\n");
+  const prompt_inline = `Remote MCP server hosting provider latency benchmark — tools/list response time, cold start, sorted by P50:\n${data_lines}\nSource: ${SITE_URL}\nWhich provider would you recommend and why? Answer in my language.`;
+  const enc_inline = encodeURIComponent(prompt_inline);
+
   const globe = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`;
   return `<p class="llm-cta">${globe} Analyser &middot; Analyze &middot; Analizar
-  <a class="claude"     href="https://claude.ai/new?q=${enc}"                          target="_blank" rel="noopener" data-track="cta-claude">Claude</a>
-  <a class="chatgpt"    href="https://chatgpt.com/?q=${enc}"                           target="_blank" rel="noopener" data-track="cta-chatgpt">ChatGPT</a>
-  <a class="perplexity" href="https://www.perplexity.ai/search?q=${enc}"               target="_blank" rel="noopener" data-track="cta-perplexity">Perplexity</a>
+  <a class="claude"     href="https://claude.ai/new?q=${enc_fetch}"                    target="_blank" rel="noopener" data-track="cta-claude">Claude</a>
+  <a class="chatgpt"    href="https://chatgpt.com/?q=${enc_fetch}"                     target="_blank" rel="noopener" data-track="cta-chatgpt">ChatGPT</a>
+  <a class="perplexity" href="https://www.perplexity.ai/search?q=${enc_inline}"        target="_blank" rel="noopener" data-track="cta-perplexity">Perplexity</a>
 </p>`;
 }
 
@@ -558,7 +572,7 @@ write(join(out_dir, "index.html"), html_page({
   meta_desc: "Latency benchmark (tools/list response time) for remote MCP server hosting providers: Cloudflare Workers, Vercel, Netlify, Railway, Supabase, Fermyon, Val.town, Render. Measured from multiple locations worldwide, sorted by P50.",
   jsonld,
   body: `<h1>Remote MCP Server Hosting Provider Latency Benchmark</h1>
-${llm_cta_block()}
+${llm_cta_block(stats_30d)}
 ${summary_table(stats_30d)}
 ${methodology_block(period_30d, Object.values(origin_map))}
 <nav class="nav">
