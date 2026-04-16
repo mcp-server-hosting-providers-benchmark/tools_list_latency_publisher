@@ -470,25 +470,33 @@ td:first-child{text-align:left}
 .footer{font-size:11px;color:#999;margin-top:24px;padding-top:10px;border-top:1px solid #eee;line-height:1.8}
 .footer a{color:#999;text-decoration:none}
 .footer a:hover{text-decoration:underline}
-.llm-cta{font-size:12px;color:#444;margin:10px 0 14px;line-height:1.8}
-.llm-cta a{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:4px;text-decoration:none;font-weight:600;font-size:11px}
+.llm-cta{font-size:12px;color:#444;margin:10px 0 14px;line-height:2}
+.llm-cta a{display:inline-block;margin-left:6px;padding:2px 8px;border-radius:4px;text-decoration:none;font-weight:600;font-size:11px}
 .llm-cta a.claude{background:#d97706;color:#fff}
 .llm-cta a.chatgpt{background:#10a37f;color:#fff}
-
-.llm-cta a:hover{opacity:0.85}
+.llm-cta a.claude-txt{background:transparent;border:1px solid #d97706;color:#d97706}
+.llm-cta a.chatgpt-txt{background:transparent;border:1px solid #10a37f;color:#10a37f}
+.llm-cta a:hover{opacity:0.75}
+.llm-cta .fmt{font-size:10px;color:#999;margin-left:4px}
 `.trim();
 
 function fmt(v) { return (v === null || v === undefined) ? "—" : String(v); }
 
 // LLM analysis CTA — prompt pré-rempli, l'utilisateur choisit quand l'envoyer
-// Seuls Claude et ChatGPT peuvent fetcher llms.json en entier depuis une URL.
+// Deux lignes : JSON (filled) et Text (outline) pour permettre la comparaison directe.
 function llm_cta_block() {
-  const prompt = `Fetch and analyze this remote MCP server hosting provider latency benchmark: ${SITE_URL}/llms.json\nWhich provider would you recommend and why? Answer in my language.`;
-  const enc = encodeURIComponent(prompt);
+  const prompt_json = `Fetch and analyze this remote MCP server hosting provider latency benchmark: ${SITE_URL}/llms.json\nWhich provider would you recommend and why? Answer in my language.`;
+  const prompt_txt  = `Fetch and analyze this remote MCP server hosting provider latency benchmark: ${SITE_URL}/llms-narrative.txt\nWhich provider would you recommend and why? Answer in my language.`;
+  const enc_json = encodeURIComponent(prompt_json);
+  const enc_txt  = encodeURIComponent(prompt_txt);
   const globe = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`;
-  return `<p class="llm-cta">${globe} Analyser &middot; Analyze &middot; Analizar
-  <a class="claude"  href="https://claude.ai/new?q=${enc}"   target="_blank" rel="noopener" data-track="cta-claude">Claude</a>
-  <a class="chatgpt" href="https://chatgpt.com/?q=${enc}"    target="_blank" rel="noopener" data-track="cta-chatgpt">ChatGPT</a>
+  return `<p class="llm-cta">${globe} Analyser &middot; Analyze &middot; Analizar<br>
+  <span class="fmt">JSON</span>
+  <a class="claude"      href="https://claude.ai/new?q=${enc_json}"  target="_blank" rel="noopener" data-track="cta-claude-json">Claude</a>
+  <a class="chatgpt"     href="https://chatgpt.com/?q=${enc_json}"   target="_blank" rel="noopener" data-track="cta-chatgpt-json">ChatGPT</a>
+  &nbsp;&nbsp;<span class="fmt">Text</span>
+  <a class="claude-txt"  href="https://claude.ai/new?q=${enc_txt}"   target="_blank" rel="noopener" data-track="cta-claude-txt">Claude</a>
+  <a class="chatgpt-txt" href="https://chatgpt.com/?q=${enc_txt}"    target="_blank" rel="noopener" data-track="cta-chatgpt-txt">ChatGPT</a>
 </p>`;
 }
 
