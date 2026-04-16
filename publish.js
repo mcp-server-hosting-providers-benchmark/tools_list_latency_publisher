@@ -31,7 +31,10 @@ const out_dir     = flag("--out")     ?? join(import.meta.dirname, "out");
 const BASE = (flag("--base") ?? "").replace(/\/$/, "");
 const u = (path) => `${BASE}${path}`;
 // Full absolute URL of the published site (used in LLM prompt links)
-const SITE_URL = (flag("--site") ?? "https://mcp-server-hosting-providers-benchmark.github.io/tools_list_latency_publisher").replace(/\/$/, "");
+const SITE_URL      = (flag("--site")      ?? "https://mcp-server-hosting-providers-benchmark.github.io/tools_list_latency_publisher").replace(/\/$/, "");
+// Optional analytics endpoint for click tracking (e.g. a Cloudflare Worker).
+// If provided, a small inline script fires navigator.sendBeacon() on every [data-track] click.
+const ANALYTICS_URL = flag("--analytics") ?? null;
 
 // --- Percentile ---
 function percentile(sorted_asc, p) {
@@ -411,6 +414,8 @@ td:first-child{text-align:left}
 .llm-cta a{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:4px;text-decoration:none;font-weight:600;font-size:11px}
 .llm-cta a.claude{background:#d97706;color:#fff}
 .llm-cta a.chatgpt{background:#10a37f;color:#fff}
+.llm-cta a.gemini{background:#4285f4;color:#fff}
+.llm-cta a.perplexity{background:#20808d;color:#fff}
 .llm-cta a:hover{opacity:0.85}
 `.trim();
 
@@ -419,12 +424,13 @@ function fmt(v) { return (v === null || v === undefined) ? "—" : String(v); }
 // LLM analysis CTA — prompt pré-rempli, l'utilisateur choisit quand l'envoyer
 function llm_cta_block() {
   const prompt = `Fetch and analyze this remote MCP server hosting provider latency benchmark: ${SITE_URL}/llms.json\nWhich provider would you recommend and why? Answer in my language.`;
-  const encoded = encodeURIComponent(prompt);
-  const claude_url  = `https://claude.ai/new?q=${encoded}`;
-  const chatgpt_url = `https://chatgpt.com/?q=${encoded}`;
-  return `<p class="llm-cta">Not speaking English?<br>
-  <a class="claude"  href="${claude_url}"  target="_blank" rel="noopener">Claude</a>
-  <a class="chatgpt" href="${chatgpt_url}" target="_blank" rel="noopener">ChatGPT</a>
+  const enc = encodeURIComponent(prompt);
+  const globe = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`;
+  return `<p class="llm-cta">${globe} Analyser &middot; Analyze &middot; Analizar
+  <a class="claude"     href="https://claude.ai/new?q=${enc}"                          target="_blank" rel="noopener" data-track="cta-claude">Claude</a>
+  <a class="chatgpt"    href="https://chatgpt.com/?q=${enc}"                           target="_blank" rel="noopener" data-track="cta-chatgpt">ChatGPT</a>
+  <a class="gemini"     href="https://gemini.google.com/app?q=${enc}"                  target="_blank" rel="noopener" data-track="cta-gemini">Gemini</a>
+  <a class="perplexity" href="https://www.perplexity.ai/search?q=${enc}"               target="_blank" rel="noopener" data-track="cta-perplexity">Perplexity</a>
 </p>`;
 }
 
@@ -509,6 +515,10 @@ function origins_nav(current_slug) {
   return links.join(" · ");
 }
 
+const TRACKING_SCRIPT = ANALYTICS_URL
+  ? `<script>document.querySelectorAll('[data-track]').forEach(function(el){el.addEventListener('click',function(){try{navigator.sendBeacon('${ANALYTICS_URL}',JSON.stringify({event:el.dataset.track,page:location.pathname,ts:Date.now()}))}catch(e){}});});</script>`
+  : "";
+
 function html_page({ title, meta_desc, jsonld, body }) {
   return `<!DOCTYPE html>
 <html lang="en">
@@ -526,6 +536,7 @@ ${body}
   <a href="https://github.com/mcp-server-hosting-providers-benchmark" target="_blank" rel="noopener">View source on GitHub</a>
   &nbsp;·&nbsp; <a href="https://github.com/mcp-server-hosting-providers-benchmark/tools_list_latency_measurer/issues" target="_blank" rel="noopener">Report an issue</a>
 </div>
+${TRACKING_SCRIPT}
 </body>
 </html>`;
 }
