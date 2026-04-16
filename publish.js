@@ -430,14 +430,14 @@ function methodology_block(period, measurement_locations) {
   }).join(" &nbsp;·&nbsp; ");
 
   return `<div class="method">
-  <strong>Method:</strong> the same MCP server is deployed unchanged on each hosting provider. Observed latency differences reflect the hosting infrastructure, not the server logic.<br>
+  <strong>Method:</strong> the same remote MCP server is deployed unchanged on each hosting provider. Observed latency differences reflect the hosting infrastructure, not the server logic.<br>
   <strong>Metric:</strong> tools/list response time in milliseconds — from the moment the MCP client sends the HTTP request to the moment it receives the response from the remote MCP server. Cold start included.<br>
   <strong>Period:</strong> ${from} – ${to} &nbsp;·&nbsp; <strong>Cadence:</strong> every 2 hours<br>
   <strong>Measured from:</strong> ${loc_links}<br>
   <strong>P50</strong> — median: half of all runs were faster than this value. Reflects typical performance.<br>
   <strong>P95</strong> — 95th percentile: 95% of runs were faster. 1 in 20 users experiences a wait longer than this.<br>
   <strong>P99</strong> — 99th percentile: 99% of runs were faster. 1 in 100 users experiences a wait longer than this. Reveals tail latency and worst-case spikes.<br>
-  <strong>What this benchmark does not measure:</strong> warm-start latency, availability, other request types, or performance under load.
+  <strong>What this benchmark does not measure:</strong> warm-start latency, tool call latency, availability, performance under load, or the remote MCP server's own execution performance (the benchmark isolates hosting infrastructure, not server logic).
 </div>`;
 }
 
