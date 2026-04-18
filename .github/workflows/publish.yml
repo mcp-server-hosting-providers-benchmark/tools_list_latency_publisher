@@ -2,7 +2,7 @@ name: publish
 
 on:
   schedule:
-    - cron: "30 */2 * * *"   # toutes les 2h à :30, après le pinger (:00)
+    - cron: "*/30 * * * *"   # toutes les 30 minutes, aligné sur le relay des pingers
   workflow_dispatch:           # déclenchement manuel
 
 permissions:
