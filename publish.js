@@ -122,16 +122,27 @@ function provider_slug(internal_name) {
   return internal_name.replace(/_/g, "-");
 }
 
+// --- Collecte récursive des fichiers résultats (supporte sous-dossiers par région) ---
+function collect_result_files(dir) {
+  const files = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (entry.isDirectory()) {
+      files.push(...collect_result_files(join(dir, entry.name)));
+    } else if (entry.name.startsWith("tools_list_") && entry.name.endsWith(".json")) {
+      files.push(join(dir, entry.name));
+    }
+  }
+  return files.sort();
+}
+
 // --- Load runs from result files ---
 function load_runs(dir, since_ms = 0) {
-  const files = readdirSync(dir)
-    .filter(f => f.startsWith("tools_list_") && f.endsWith(".json"))
-    .sort();
+  const files = collect_result_files(dir);
 
   const runs = [];
   for (const file of files) {
     let data;
-    try { data = JSON.parse(readFileSync(join(dir, file), "utf-8")); }
+    try { data = JSON.parse(readFileSync(file, "utf-8")); }
     catch { continue; }
 
     const ts = new Date(data.date ?? 0).getTime();

@@ -26,14 +26,10 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Fetch pinger results (data branch)
+      - name: Fetch pinger results (GCS)
         run: |
-          git clone \
-            --branch data \
-            --single-branch \
-            --depth 1000 \
-            https://github.com/mcp-server-hosting-providers-benchmark/tools_list_latency_measurer.git \
-            results
+          mkdir -p results
+          gsutil -m rsync -r gs://mcp-benchmark-results results/
 
       - name: Run publisher
         run: node publish.js --results ./results --out ./out --base /tools_list_latency_publisher
