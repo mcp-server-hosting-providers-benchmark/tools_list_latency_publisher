@@ -316,7 +316,7 @@ function write(path, content) {
 // llms.txt
 write(join(out_dir, "llms.txt"),
 `This site publishes a latency benchmark for remote MCP server hosting providers.
-Metric: tools/list response time in milliseconds, cold start included, measured every 2 hours from multiple locations worldwide.
+Metric: tools/list response time in milliseconds, measured every 30 minutes in relay from 12 geographic origins across 6 continents. No warm-up request sent before each measurement.
 Machine-readable data index (providers, stats, dataset URLs): ${u("/llms.json")}
 Each entry in the index contains a dataset URL and a plain-language description of its contents.
 `);
@@ -324,7 +324,7 @@ Each entry in the index contains a dataset URL and a plain-language description 
 // llms-full.txt
 write(join(out_dir, "llms-full.txt"),
 `This site publishes a latency benchmark for remote MCP server hosting providers.
-Metric: tools/list response time in milliseconds, cold start included, measured every 2 hours from multiple locations worldwide.
+Metric: tools/list response time in milliseconds, measured every 30 minutes in relay from 12 geographic origins across 6 continents. No warm-up request sent before each measurement.
 Full dataset (all providers, aggregated stats, and individual run records from the last 24 hours): ${u("/llms-full.json")}
 `);
 
@@ -362,11 +362,11 @@ Full dataset (all providers, aggregated stats, and individual run records from t
 Source: ${SITE_URL}
 Last updated: ${new Date().toISOString()}
 Evaluation period: ${from_s} – ${to_s}
-Measurement cadence: every 2 hours
+Measurement cadence: one ping every 30 minutes in relay — 12 geographic origins across 6 continents, each origin pings every 6 hours
 
 ## What is measured
 
-tools/list response time in milliseconds — from the moment the MCP client sends the HTTP request to the moment it receives the complete response from the remote MCP server. Cold start is included (the server may need to spin up before responding).
+tools/list response time in milliseconds — from the moment the MCP client sends the HTTP request to the moment it receives the complete response from the remote MCP server. No warm-up request is sent before each measurement.
 
 ## What is NOT measured
 
@@ -438,9 +438,9 @@ function provider_json_entry(p, include_runs = false) {
 const period_90d = eval_period(eff_90d);
 write(join(out_dir, "llms.json"), JSON.stringify({
   title: "Remote MCP server hosting provider latency benchmark",
-  metric: "tools/list response time in milliseconds — cold start included — measured from multiple locations worldwide",
+  metric: "tools/list response time in milliseconds — measured every 30 minutes in relay from 12 geographic origins across 6 continents — no warm-up request before each measurement",
   unit: "ms",
-  measurement_cadence_hours: 2,
+  measurement_cadence_minutes: 30,
   evaluation_period: period_90d,
   last_updated: new Date().toISOString(),
   pinger_locations,
@@ -451,9 +451,9 @@ write(join(out_dir, "llms.json"), JSON.stringify({
 // llms-full.json (24h, with individual runs)
 write(join(out_dir, "llms-full.json"), JSON.stringify({
   title: "Remote MCP server hosting provider latency benchmark",
-  metric: "tools/list response time in milliseconds — cold start included",
+  metric: "tools/list response time in milliseconds — no warm-up request before each measurement",
   unit: "ms",
-  measurement_cadence_hours: 2,
+  measurement_cadence_minutes: 30,
   evaluation_period: eval_period(eff_24h),
   last_updated: new Date().toISOString(),
   pinger_locations,
@@ -465,7 +465,7 @@ for (const { geo, runs } of Object.values(origin_map)) {
   const stats = aggregate(runs);
   write(join(out_dir, "tools-list-latency-from", `${geo_slug(geo)}.json`), JSON.stringify({
     title: "Remote MCP server hosting provider latency benchmark",
-    metric: "tools/list response time in milliseconds — cold start included",
+    metric: "tools/list response time in milliseconds — no warm-up request before each measurement",
     unit: "ms",
     filter: { pinger_location: geo_display(geo) },
     evaluation_period: eval_period(runs),
@@ -562,8 +562,8 @@ function methodology_block(period, measurement_locations) {
 
   return `<div class="method">
   <strong>Method:</strong> the same remote MCP server is deployed unchanged on each hosting provider. Observed latency differences reflect the hosting infrastructure, not the server logic.<br>
-  <strong>Metric:</strong> tools/list response time in milliseconds — from the moment the MCP client sends the HTTP request to the moment it receives the response from the remote MCP server. Cold start included.<br>
-  <strong>Period:</strong> ${from} – ${to} &nbsp;·&nbsp; <strong>Cadence:</strong> every 2 hours<br>
+  <strong>Metric:</strong> tools/list response time in milliseconds — from the moment the MCP client sends the HTTP request to the moment it receives the response from the remote MCP server. No warm-up request sent before each measurement.<br>
+  <strong>Period:</strong> ${from} – ${to} &nbsp;·&nbsp; <strong>Cadence:</strong> one ping every 30 minutes in relay — 12 geographic origins across 6 continents (Americas, Europe, Asia, Oceania, Middle East, Africa), each origin pings every 6 hours. Over 30 days: 100+ measurements per provider per origin, 1&thinsp;400+ measurements per provider across all origins.<br>
   <strong>Measured from:</strong> ${loc_links}<br>
   <strong>P50</strong> — median: half of all runs were faster than this value. Reflects typical performance.<br>
   <strong>P95</strong> — 95th percentile: 95% of runs were faster. 1 in 20 users experiences a wait longer than this.<br>
@@ -653,10 +653,10 @@ const jsonld = JSON.stringify({
   "@context": "https://schema.org",
   "@type": "Dataset",
   "name": "Remote MCP Server Hosting Provider Latency Benchmark",
-  "description": "tools/list response time benchmark for remote MCP server hosting providers — cold start included — measured from multiple locations worldwide",
+  "description": "tools/list response time benchmark for remote MCP server hosting providers — measured every 30 minutes in relay from 12 geographic origins across 6 continents — no warm-up request before each measurement",
   "url": u("/"),
   "temporalCoverage": `${period_30d.from ?? ""}/${period_30d.to ?? ""}`,
-  "measurementMethod": "Automated tools/list request every 2 hours from multiple geographic locations",
+  "measurementMethod": "One ping every 30 minutes in relay — 12 geographic origins across 6 continents, each origin pings every 6 hours",
   "variableMeasured": "tools/list latency in milliseconds"
 }, null, 2);
 
