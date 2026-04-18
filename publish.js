@@ -123,9 +123,8 @@ function server_location_display(server_geos) {
 
 // --- Pinger platform helpers ---
 // Traduit pinger_source_url en nom lisible.
-// undefined → null (champ absent, vieux fichier — ne pas afficher)
-// null      → "Local machine" (Mac local, champ présent mais vide)
-// URL       → "Google Cloud Run" / domaine brut
+// undefined → null (champ absent — ne pas afficher)
+// string    → "Google Cloud Run" (gcr://) ou domaine brut
 function pinger_platform(source_url) {
   if (source_url === undefined) return null;
   if (source_url === null) return null;
@@ -187,9 +186,8 @@ function load_runs(dir, since_ms = 0) {
         error_type,
         client_geo,
         server_geo: get_server_geo(r),
-        // undefined = champ absent (vieux fichier, plateforme inconnue)
-        // null      = champ présent mais vide (Mac local, intentionnel)
-        // string    = URL CI (GitHub Actions, GitLab CI...)
+        // undefined = champ absent (plateforme inconnue)
+        // string    = URL Cloud Run (gcr://...)
         pinger_source_url: "pinger_source_url" in data ? data.pinger_source_url : undefined,
       });
     }
