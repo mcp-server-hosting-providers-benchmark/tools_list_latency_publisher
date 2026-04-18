@@ -130,9 +130,7 @@ function pinger_platform(source_url) {
   if (source_url === null) return null;
   if (source_url.startsWith("gcr://")) return "Google Cloud Run";
   try {
-    const host = new URL(source_url).hostname;
-    if (host === "github.com") return "GitHub Actions";
-    return host;
+    return new URL(source_url).hostname;
   } catch { return null; }
 }
 
@@ -280,7 +278,7 @@ for (const run of eff_30d) {
   const key = geo_key(run.client_geo);
   if (!key) continue;
   if (!origin_map[key]) origin_map[key] = { geo: run.client_geo, runs: [], pinger_source_url: undefined };
-  // Garder la première valeur connue (null = Mac intentionnel, string = CI)
+  // Garder la première valeur connue (gcr://...)
   if (origin_map[key].pinger_source_url === undefined && run.pinger_source_url !== undefined) {
     origin_map[key].pinger_source_url = run.pinger_source_url;
   }
