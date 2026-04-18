@@ -1,11 +1,11 @@
 {
   "name": "remote_mcp_hosting_provider_tools_list_latency_publisher",
-  "friction": "The latency benchmark pipeline produces raw measurement files and aggregated JSON — but no human-readable output, no machine-discoverable index, and no static site for Google or LLM crawlers.",
-  "input": "Directory of tools_list_*.json files produced by the remote MCP server hosting provider latency benchmark pipeline (latency_measurement_results_collector, data branch).",
-  "output": "Static site in out/: llms.txt, llms-full.txt, llms.json (90-day stats), llms-full.json (24h stats + runs), robots.txt, index.html (mobile-first summary), one HTML page per hosting provider, one HTML page per pinger origin, one JSON file per pinger origin.",
-  "output_url": "GitHub Pages URL — to be configured when the repo is published.",
-  "when_to_use": "After new measurement files have been collected and you want to update the public benchmark site and machine-readable data files.",
-  "when_not_to_use": "To run measurements (use tools_list_latency_measurer). To collect and consolidate results (use latency_measurement_results_collector). To produce agent-native JSON only (use remote_mcp_hosting_provider_tools_list_latency_analysis).",
-  "schedule": "On demand or triggered after each collection run.",
-  "usage": "node publish.js [--results <path_to_result_files>] [--out <output_directory>]"
+  "friction": "The latency benchmark pipeline produces raw measurement files in GCS — but no human-readable output, no machine-discoverable index, and no static site for Google or LLM crawlers.",
+  "input": "Measurement files (tools_list_*.json) synced from GCS bucket gs://mcp-benchmark-results, written by Cloud Run pingers (tools_list_latency_measurer/gcr_pinger).",
+  "output": "Static site deployed to GitHub Pages: index.html (global summary), one HTML page per hosting provider, one HTML page per pinger origin, one JSON file per pinger origin, llms.json, llms-full.json.",
+  "output_url": "https://mcp-server-hosting-providers-benchmark.github.io/tools_list_latency_publisher/",
+  "when_to_use": "After new measurement files have been written to GCS and you want to update the public benchmark site.",
+  "when_not_to_use": "To run measurements — use tools_list_latency_measurer (gcr_pinger).",
+  "schedule": "GitHub Actions cron every 30 minutes (publish.yml).",
+  "usage": "node publish.js [--results <path>] [--out <output_directory>] [--base <base_path>]"
 }
