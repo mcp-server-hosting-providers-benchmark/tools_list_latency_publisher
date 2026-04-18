@@ -51,11 +51,34 @@ const COUNTRY_NAMES = {
   MX:"Mexico", MY:"Malaysia", NG:"Nigeria", NL:"Netherlands", PH:"Philippines",
   PK:"Pakistan", PL:"Poland", RU:"Russia", SA:"Saudi Arabia", SE:"Sweden",
   SG:"Singapore", TH:"Thailand", TR:"Turkey", TW:"Taiwan", UA:"Ukraine",
-  AE:"UAE", US:"United States", VN:"Vietnam", ZA:"South Africa"
+  AE:"UAE", IL:"Israel", US:"United States", VN:"Vietnam", ZA:"South Africa"
 };
 const country_name = (iso) => COUNTRY_NAMES[iso] ?? iso;
 
-function get_client_geo(data) {
+// Geo statique par pinger label (nom du dossier GCS).
+// Utilisé à la place de la résolution IP dynamique, supprimée des pingers GCR.
+const LABEL_GEO = {
+  sydney_au:       { city: "Sydney",        country: "Australia",     country_code: "AU" },
+  virginia_us:     { city: "Ashburn",       country: "United States", country_code: "US" },
+  oregon_us:       { city: "The Dalles",    country: "United States", country_code: "US" },
+  paris_fr:        { city: "Paris",         country: "France",        country_code: "FR" },
+  warsaw_pl:       { city: "Warsaw",        country: "Poland",        country_code: "PL" },
+  tokyo_jp:        { city: "Tokyo",         country: "Japan",         country_code: "JP" },
+  singapore_sg:    { city: "Singapore",     country: "Singapore",     country_code: "SG" },
+  mumbai_in:       { city: "Mumbai",        country: "India",         country_code: "IN" },
+  sao_paulo_br:    { city: "São Paulo",     country: "Brazil",        country_code: "BR" },
+  tel_aviv_il:     { city: "Tel Aviv",      country: "Israel",        country_code: "IL" },
+  johannesburg_za: { city: "Johannesburg",  country: "South Africa",  country_code: "ZA" },
+  hong_kong_hk:    { city: "Hong Kong",     country: "Hong Kong",     country_code: "HK" },
+};
+
+function get_client_geo(data, file_path) {
+  const label = data.server_label ?? null;
+  if (label && LABEL_GEO[label]) return LABEL_GEO[label];
+  // Fallback : inférer depuis le nom du dossier parent
+  const folder = file_path ? file_path.split("/").slice(-2, -1)[0] : null;
+  if (folder && LABEL_GEO[folder]) return LABEL_GEO[folder];
+  // Dernier recours : geo enregistrée dans le fichier (anciens runs MacBook)
   const chain = data.results?.[0]?.observed_call_chain;
   return chain?.find(c => c.role === "mcpclient")?.geo ?? null;
 }
@@ -148,7 +171,7 @@ function load_runs(dir, since_ms = 0) {
     const ts = new Date(data.date ?? 0).getTime();
     if (ts < since_ms) continue;
 
-    const client_geo = get_client_geo(data);
+    const client_geo = get_client_geo(data, file);
     for (const r of data.results ?? []) {
       if (!r.timestamps?.mcpclient) continue;
       const ms = Math.round(
