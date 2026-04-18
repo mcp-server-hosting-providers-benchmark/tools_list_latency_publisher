@@ -264,7 +264,12 @@ const eff_90d = runs_90d.length ? runs_90d : all_runs;
 const eff_30d = runs_30d.length ? runs_30d : all_runs;
 const eff_24h = runs_24h.length ? runs_24h : all_runs;
 
-if (!all_runs.length) { process.stderr.write("No result files found.\n"); process.exit(1); }
+if (!all_runs.length) {
+  const empty_html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Remote MCP Server Hosting Provider Latency Benchmark</title></head><body><h1>Remote MCP Server Hosting Provider Latency Benchmark</h1><p>Data collection in progress — first results expected within 6 hours.</p></body></html>`;
+  writeFileSync(join(out_dir, "index.html"), empty_html);
+  process.stderr.write("No result files found — wrote placeholder index.html.\n");
+  process.exit(0);
+}
 
 const stats_30d = aggregate(eff_30d);
 const stats_90d = aggregate(eff_90d);
