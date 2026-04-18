@@ -78,7 +78,7 @@ function get_client_geo(data, file_path) {
   // Fallback : inférer depuis le nom du dossier parent
   const folder = file_path ? file_path.split("/").slice(-2, -1)[0] : null;
   if (folder && LABEL_GEO[folder]) return LABEL_GEO[folder];
-  // Dernier recours : geo enregistrée dans le fichier (anciens runs MacBook)
+  // Dernier recours : geo enregistrée dans le fichier (champ observé_call_chain)
   const chain = data.results?.[0]?.observed_call_chain;
   return chain?.find(c => c.role === "mcpclient")?.geo ?? null;
 }
@@ -125,14 +125,14 @@ function server_location_display(server_geos) {
 // Traduit pinger_source_url en nom lisible.
 // undefined → null (champ absent, vieux fichier — ne pas afficher)
 // null      → "Local machine" (Mac local, champ présent mais vide)
-// URL       → "GitHub Actions" / "GitLab CI" / domaine brut
+// URL       → "Google Cloud Run" / domaine brut
 function pinger_platform(source_url) {
   if (source_url === undefined) return null;
-  if (source_url === null) return "Local machine";
+  if (source_url === null) return null;
+  if (source_url.startsWith("gcr://")) return "Google Cloud Run";
   try {
     const host = new URL(source_url).hostname;
     if (host === "github.com") return "GitHub Actions";
-    if (host === "gitlab.com") return "GitLab CI";
     return host;
   } catch { return null; }
 }
