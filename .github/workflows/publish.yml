@@ -1,9 +1,7 @@
 name: publish
 
 on:
-  schedule:
-    - cron: "*/30 * * * *"   # toutes les 30 minutes, aligné sur le relay des pingers
-  workflow_dispatch:           # déclenchement manuel
+  workflow_dispatch:           # déclenché par les pingers via l'API GitHub Actions
 
 permissions:
   contents: read
