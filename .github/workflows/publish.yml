@@ -29,8 +29,12 @@ jobs:
           mkdir -p results
           gsutil -m rsync -r gs://mcp-benchmark-results results/ || true
 
+      - name: Fetch provider metadata
+        run: |
+          curl -s "https://raw.githubusercontent.com/mcp-server-hosting-providers-benchmark/mcp_server_per_hosting_provider/main/hosting_providers_metadata.json" > provider_metadata.json
+
       - name: Run publisher
-        run: node publish.js --results ./results --out ./out --base /tools_list_latency_publisher
+        run: node publish.js --results ./results --out ./out --base /tools_list_latency_publisher --metadata ./provider_metadata.json
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

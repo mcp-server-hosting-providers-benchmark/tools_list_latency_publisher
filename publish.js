@@ -24,8 +24,9 @@ import { join, dirname } from "path";
 const args = process.argv.slice(2);
 const flag = (name) => { const i = args.indexOf(name); return i !== -1 ? args[i + 1] : null; };
 
-const results_dir = flag("--results") ?? join(import.meta.dirname, "results");
-const out_dir     = flag("--out")     ?? join(import.meta.dirname, "out");
+const results_dir    = flag("--results")  ?? join(import.meta.dirname, "results");
+const out_dir        = flag("--out")      ?? join(import.meta.dirname, "out");
+const metadata_path  = flag("--metadata") ?? null;
 // Base URL prefix for all internal links (e.g. "/tools_list_latency_publisher" for GitHub Pages subdirectory).
 // Leave empty when the site is served from the root.
 const BASE = (flag("--base") ?? "").replace(/\/$/, "");
@@ -35,6 +36,29 @@ const SITE_URL      = (flag("--site")      ?? "https://mcp-server-hosting-provid
 // Optional analytics endpoint for click tracking (e.g. a Cloudflare Worker).
 // If provided, a small inline script fires navigator.sendBeacon() on every [data-track] click.
 const ANALYTICS_URL = flag("--analytics") ?? null;
+
+// --- Provider metadata (free_usage_permanent, no_credit_card, agent_deployable_100pct) ---
+const provider_metadata = {};
+if (metadata_path) {
+  try {
+    const raw = JSON.parse(readFileSync(metadata_path, "utf-8"));
+    for (const p of raw.providers ?? []) {
+      const slug = p.name.toLowerCase()
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+      const checked_on = (p.sources ?? [])
+        .map(s => s.checked_on).filter(Boolean).sort().pop() ?? null;
+      provider_metadata[slug] = {
+        free_usage_permanent:  p.free_usage_permanent  ?? null,
+        no_credit_card:        p.no_credit_card        ?? null,
+        agent_deployable_100pct: p.agent_deployable_100pct ?? null,
+        metadata_checked_on:   checked_on,
+      };
+    }
+  } catch (e) {
+    process.stderr.write(`Warning: could not load metadata file: ${e.message}\n`);
+  }
+}
 
 // --- Percentile ---
 function percentile(sorted_asc, p) {
@@ -409,10 +433,15 @@ for (const { geo } of Object.values(origin_map)) {
 }
 
 function provider_json_entry(p, include_runs = false) {
+  const meta = provider_metadata[p.slug] ?? {};
   const entry = {
     name: p.display_name,
     slug: p.slug,
     server_location: server_location_display(p.server_geos),
+    free_usage_permanent:    meta.free_usage_permanent    ?? null,
+    no_credit_card:          meta.no_credit_card          ?? null,
+    agent_deployable_100pct: meta.agent_deployable_100pct ?? null,
+    metadata_checked_on:     meta.metadata_checked_on     ?? null,
     n_runs: p.n_runs,
     runs_ok: p.runs_ok,
     runs_error: p.runs_error,
