@@ -37,27 +37,70 @@ const SITE_URL      = (flag("--site")      ?? "https://mcp-server-hosting-provid
 // If provided, a small inline script fires navigator.sendBeacon() on every [data-track] click.
 const ANALYTICS_URL = flag("--analytics") ?? null;
 
-// --- Provider metadata (free_usage_permanent, no_credit_card, agent_deployable_100pct) ---
+// --- Provider metadata (free_usage_permanent, no_credit_card, agent_deployable_100pct, execution_model, deployment_region, benchmark_contract) ---
 const provider_metadata = {};
+let benchmark_contract = null;
+// List of providers evaluated but excluded from the latency table, populated from metadata
+// so the site can surface them with a short reason and a link to the full metadata entry.
+const evaluated_but_excluded = [];
 if (metadata_path) {
   try {
     const raw = JSON.parse(readFileSync(metadata_path, "utf-8"));
+    benchmark_contract = raw.benchmark_contract ?? null;
     for (const p of raw.providers ?? []) {
-      const slug = p.name.toLowerCase()
-        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+      // Slug must match the key used in mcp_servers_under_test.json so provider_metadata
+      // lookups hit the right entry. Metadata may override via "internal_name"
+      // (e.g. "Val Town" → "valtown"). Otherwise derive from the display name.
+      const base_slug = (p.internal_name && typeof p.internal_name === "string")
+        ? p.internal_name.replace(/_/g, "-")
+        : p.name.toLowerCase()
+            .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+      const slug = base_slug;
       const checked_on = (p.sources ?? [])
         .map(s => s.checked_on).filter(Boolean).sort().pop() ?? null;
       provider_metadata[slug] = {
         free_usage_permanent:  p.free_usage_permanent  ?? null,
         no_credit_card:        p.no_credit_card        ?? null,
         agent_deployable_100pct: p.agent_deployable_100pct ?? null,
+        execution_model:       p.execution_model       ?? null,
+        deployment_region:     p.deployment_region     ?? null,
+        region_source:         p.region_source         ?? null,
         metadata_checked_on:   checked_on,
       };
+      if (p.benchmark_status === "excluded" || p.benchmark_status === "pending") {
+        evaluated_but_excluded.push({
+          name: p.name,
+          status: p.benchmark_status,
+          exclusion_reason: p.exclusion_reason ?? null,
+          notes: p.notes ?? null,
+          free_usage_permanent: p.free_usage_permanent ?? null,
+          no_credit_card: p.no_credit_card ?? null,
+          agent_deployable_100pct: p.agent_deployable_100pct ?? null,
+        });
+      }
     }
   } catch (e) {
     process.stderr.write(`Warning: could not load metadata file: ${e.message}\n`);
   }
+}
+
+// Display the real deployment region of the MCP server, based on metadata.
+// For anycast / edge-network without a single origin, describe the execution model
+// instead of a city — because there is no single city where the code runs.
+function provider_location_display(slug) {
+  const meta = provider_metadata[slug];
+  if (!meta) return "Unknown";
+  const model = meta.execution_model;
+  const region = meta.deployment_region;
+  if (model === "anycast") return "Global anycast (runs in every provider data center)";
+  if (model === "edge-network") {
+    return region ? `Edge network — function origin: ${region}` : "Edge network (no single origin region)";
+  }
+  if (model === "single-region") {
+    return region ?? "Single region (not yet declared)";
+  }
+  return "Unknown";
 }
 
 // --- Percentile ---
@@ -138,9 +181,9 @@ function geo_short(geo) {
   return `${geo.city ?? ""}·${geo.country_code ?? ""}`;
 }
 
-// Parse endpoint geos stored as "City·CC" strings.
-// This is the DNS-resolved endpoint seen by the pinger. For CDN-backed
-// providers, it is often the nearest edge, not the provider's origin region.
+// Legacy fallback. The DNS-resolved endpoint IP seen by each pinger aggregated into
+// a list of cities. Kept only as a backup when metadata lacks execution_model.
+// The real deployment location should come from provider_location_display(slug).
 function endpoint_location_display(server_geos) {
   if (!server_geos?.length) return "Unknown";
   const locations = server_geos.map(s => {
@@ -367,7 +410,7 @@ Full dataset (all providers, aggregated stats, and individual run records from t
 
   const providers_txt = stats_24h.map((p, i) => {
     const l = p.latency_ms;
-    const loc = endpoint_location_display(p.server_geos);
+    const loc = provider_location_display(p.slug);
     const runs_txt = (runs_24h_by_provider[p.name] ?? [])
       .sort((a, b) => (b.ts ?? "").localeCompare(a.ts ?? ""))
       .slice(0, 5)
@@ -379,7 +422,7 @@ Full dataset (all providers, aggregated stats, and individual run records from t
     const errors_line = p.runs_error > 0
       ? `\nTimeouts/errors: ${p.runs_error} (${Object.entries(p.error_summary).map(([t,c])=>`${c}x ${t}`).join(", ")})`
       : "";
-    return `### ${i+1}. ${p.display_name}\nResolved endpoint/edge location: ${loc}\nTotal runs: ${p.n_runs} (${p.runs_ok} ok${p.runs_error ? `, ${p.runs_error} errors` : ""})\nLatency: ${stats_line}${errors_line}${runs_txt ? `\nRecent runs (last 24h):\n${runs_txt}` : ""}`;
+    return `### ${i+1}. ${p.display_name}\nDeployment location: ${loc}\nTotal runs: ${p.n_runs} (${p.runs_ok} ok${p.runs_error ? `, ${p.runs_error} errors` : ""})\nLatency: ${stats_line}${errors_line}${runs_txt ? `\nRecent runs (last 24h):\n${runs_txt}` : ""}`;
   }).join("\n\n");
 
   write(join(out_dir, "llms-narrative.txt"),
@@ -405,6 +448,13 @@ ${pingers_txt}
 ## Results (sorted by P50 ascending)
 
 ${providers_txt}
+
+## Also evaluated — not in the latency table
+
+${evaluated_but_excluded.length === 0 ? "None." : evaluated_but_excluded.map(x => {
+  const reason = x.exclusion_reason ?? x.notes ?? (x.status === "pending" ? "Evaluation in progress." : "No reason recorded.");
+  return `- ${x.name} (${x.status}): ${reason}`;
+}).join("\n")}
 
 ## Percentile definitions
 
@@ -443,7 +493,9 @@ function provider_json_entry(p, include_runs = false) {
   const entry = {
     name: p.display_name,
     slug: p.slug,
-    resolved_endpoint_location: endpoint_location_display(p.server_geos),
+    execution_model:         meta.execution_model         ?? null,
+    deployment_region:       meta.deployment_region       ?? null,
+    deployment_location_display: provider_location_display(p.slug),
     free_usage_permanent:    meta.free_usage_permanent    ?? null,
     no_credit_card:          meta.no_credit_card          ?? null,
     agent_deployable_100pct: meta.agent_deployable_100pct ?? null,
@@ -472,11 +524,13 @@ write(join(out_dir, "llms.json"), JSON.stringify({
   metric: "tools/list response time in milliseconds — measured every 30 minutes in relay from 12 geographic origins across 6 continents — no warm-up request before each measurement",
   unit: "ms",
   measurement_cadence_minutes: 30,
+  benchmark_contract,
   evaluation_period: period_90d,
   last_updated: new Date().toISOString(),
   pinger_locations,
   datasets,
-  providers: stats_90d.map(p => provider_json_entry(p, false))
+  providers: stats_90d.map(p => provider_json_entry(p, false)),
+  evaluated_but_excluded
 }, null, 2));
 
 // llms-full.json (24h, with individual runs)
@@ -485,10 +539,12 @@ write(join(out_dir, "llms-full.json"), JSON.stringify({
   metric: "tools/list response time in milliseconds — no warm-up request before each measurement",
   unit: "ms",
   measurement_cadence_minutes: 30,
+  benchmark_contract,
   evaluation_period: eval_period(eff_24h),
   last_updated: new Date().toISOString(),
   pinger_locations,
-  providers: stats_24h.map(p => provider_json_entry(p, true))
+  providers: stats_24h.map(p => provider_json_entry(p, true)),
+  evaluated_but_excluded
 }, null, 2));
 
 // Per-origin JSON files (30d, no individual runs)
@@ -580,6 +636,22 @@ function fmt_errors(p) {
 }
 
 // Methodology block displayed below the table
+function evaluated_but_excluded_block() {
+  if (!Array.isArray(evaluated_but_excluded) || evaluated_but_excluded.length === 0) return "";
+  const rows = evaluated_but_excluded.map(x => {
+    const reason = x.exclusion_reason
+      ?? x.notes
+      ?? (x.status === "pending" ? "Evaluation in progress." : "No reason recorded.");
+    const status_label = x.status === "excluded" ? "Excluded" : "Pending";
+    return `<li><strong>${x.name}</strong> <span style="color:#888">— ${status_label}.</span> ${reason}</li>`;
+  }).join("\n");
+  return `<div class="method" style="margin-top:16px">
+  <strong>Also evaluated — not in the latency table</strong><br>
+  <span style="color:#666">These remote MCP server hosting providers were evaluated but are not currently measured. Each entry states the reason.</span>
+  <ul style="margin-top:8px;padding-left:18px;line-height:1.7">${rows}</ul>
+</div>`;
+}
+
 function methodology_block(period, measurement_locations) {
   const from = period.from ? new Date(period.from).toLocaleDateString("en-GB", { day:"numeric", month:"short", year:"numeric" }) : "?";
   const to   = period.to   ? new Date(period.to  ).toLocaleDateString("en-GB", { day:"numeric", month:"short", year:"numeric" }) : "?";
@@ -594,9 +666,10 @@ function methodology_block(period, measurement_locations) {
   return `<div class="method">
   <strong>Method:</strong> the same remote MCP server is deployed unchanged on each hosting provider. Observed latency differences reflect the hosting infrastructure, not the server logic.<br>
   <strong>Metric:</strong> tools/list response time in milliseconds — from the moment the MCP client sends the HTTP request to the moment it receives the response from the remote MCP server. No warm-up request sent before each measurement.<br>
+  <strong>Request shape:</strong> a single stateless JSON-RPC POST with method <code>tools/list</code> and id <code>1</code>, headers <code>Content-Type: application/json</code> and <code>Accept: application/json, text/event-stream</code>. No prior <code>initialize</code> call, no MCP session id, no retry. Timeout: 15&thinsp;000&nbsp;ms.<br>
   <strong>Period:</strong> ${from} – ${to} &nbsp;·&nbsp; <strong>Cadence:</strong> one ping every 30 minutes in relay — 12 geographic origins across 6 continents (Americas, Europe, Asia, Oceania, Middle East, Africa), each origin pings every 6 hours. Over 30 days: 100+ measurements per provider per origin, 1&thinsp;400+ measurements per provider across all origins.<br>
   <strong>Measured from:</strong> ${loc_links}<br>
-  <strong>Endpoint geolocation:</strong> provider rows show the DNS-resolved endpoint IP observed by the pinger. For CDN-backed providers this can be the nearest edge location, not the provider's origin datacenter.<br>
+  <strong>Deployment location:</strong> shown per provider is the real execution region of the MCP server, curated from each provider's own signal (HTTP response headers or provider dashboard) and stored in the benchmark metadata — not a DNS-resolved CDN edge. For providers running on a global edge network or anycast, the execution model is shown instead of a single city.<br>
   <strong>P50</strong> — median: half of all runs were faster than this value. Reflects typical performance.<br>
   <strong>P95</strong> — 95th percentile: 95% of runs were faster. 1 in 20 users experiences a wait longer than this.<br>
   <strong>P99</strong> — 99th percentile: 99% of runs were faster. 1 in 100 users experiences a wait longer than this. Reveals tail latency and worst-case spikes.<br>
@@ -608,7 +681,7 @@ function summary_table(providers, provider_link = true) {
   const rows = providers.map(p => {
     const lat = p.latency_ms;
     const n   = p.n_runs;
-    const loc = endpoint_location_display(p.server_geos);
+    const loc = provider_location_display(p.slug);
     const name_cell = provider_link
       ? `<a href="${u(`/remote-mcp-server-hosting-provider/${p.slug}.html`)}">${p.display_name}</a>`
       : p.display_name;
@@ -629,7 +702,7 @@ function summary_table(providers, provider_link = true) {
   return `<table>
   <thead>
   <tr>
-    <th scope="col" style="text-align:left;width:38%">Hosting provider<br><span style="font-weight:400;color:#888">Resolved endpoint / edge</span></th>
+    <th scope="col" style="text-align:left;width:38%">Hosting provider<br><span style="font-weight:400;color:#888">Deployment location</span></th>
     <th scope="col">Min<br><span style="font-weight:400;color:#888">ms</span></th>
     <th scope="col">P50<br><span style="font-weight:400;color:#888">ms</span></th>
     <th scope="col">P95<br><span style="font-weight:400;color:#888">ms</span></th>
@@ -700,6 +773,7 @@ write(join(out_dir, "index.html"), html_page({
   body: `<h1>Remote MCP Server Hosting Provider Latency Benchmark</h1>
 ${llm_cta_block()}
 ${summary_table(stats_30d)}
+${evaluated_but_excluded_block()}
 ${methodology_block(period_30d, Object.values(origin_map))}
 <nav class="nav">
   <a href="${u('/remote-mcp-server-hosting-provider/')}">Providers</a>
@@ -713,7 +787,7 @@ ${methodology_block(period_30d, Object.values(origin_map))}
 for (const p of stats_30d) {
   const recent = (runs_24h_by_provider[p.name] ?? [])
     .sort((a, b) => (b.ts ?? "").localeCompare(a.ts ?? ""));
-  const endpoint_loc = endpoint_location_display(p.server_geos);
+  const endpoint_loc = provider_location_display(p.slug);
   const lat = p.latency_ms;
 
   const runs_rows = recent.length === 0
@@ -726,11 +800,11 @@ for (const p of stats_30d) {
 
   write(join(out_dir, "remote-mcp-server-hosting-provider", `${p.slug}.html`), html_page({
     title: `${p.display_name} — Remote MCP Server Hosting Latency`,
-    meta_desc: `tools/list response time benchmark for ${p.display_name} remote MCP server hosting. Resolved endpoint: ${endpoint_loc}. Min, P50, P99, Max over the measurement period.`,
+    meta_desc: `tools/list response time benchmark for ${p.display_name} remote MCP server hosting. Deployment location: ${endpoint_loc}. Min, P50, P99, Max over the measurement period.`,
     jsonld: null,
     body: `<p class="back"><a href="${u('/')}">← Benchmark home</a></p>
 <h1>${p.display_name}</h1>
-<p class="meta">Remote MCP server hosting provider · Resolved endpoint / edge: ${endpoint_loc}</p>
+<p class="meta">Remote MCP server hosting provider · Deployment location: ${endpoint_loc}</p>
 
 <table>
   <thead><tr>
@@ -771,7 +845,7 @@ ${methodology_block(period_30d, Object.values(origin_map))}
 
 // Provider index page
 const provider_index_rows = stats_30d.map(p =>
-  `<li><a href="${u(`/remote-mcp-server-hosting-provider/${p.slug}.html`)}">${p.display_name}</a> — ${endpoint_location_display(p.server_geos)}</li>`
+  `<li><a href="${u(`/remote-mcp-server-hosting-provider/${p.slug}.html`)}">${p.display_name}</a> — ${provider_location_display(p.slug)}</li>`
 ).join("\n");
 
 write(join(out_dir, "remote-mcp-server-hosting-provider", "index.html"), html_page({
