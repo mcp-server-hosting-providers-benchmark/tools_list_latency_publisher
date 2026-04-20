@@ -569,6 +569,7 @@ const CSS = `
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:system-ui,-apple-system,sans-serif;font-size:14px;color:#111;background:#fff;padding:14px}
 h1{font-size:17px;font-weight:700;line-height:1.3;margin-bottom:4px}
+.subtitle{font-size:12px;color:#555;margin-bottom:10px;line-height:1.5}
 .meta{font-size:11px;color:#666;margin-bottom:10px;line-height:1.6}
 .origins{font-size:12px;margin-bottom:14px}
 .origins a,.origins strong{margin-right:6px}
@@ -689,7 +690,7 @@ function summary_table(providers, provider_link = true) {
       ? `<span class="err">${fmt_errors(p)}</span>`
       : "—";
     return `<tr>
-      <td><div class="pname">${name_cell}</div><div class="sloc">${loc}</div></td>
+      <td><div class="pname">${name_cell}</div></td>
       <td>${fmt(lat?.min)}</td>
       <td>${fmt(lat?.p50)}<span class="n">${n} runs</span></td>
       <td>${fmt(lat?.p95)}<span class="n">${n} runs</span></td>
@@ -702,7 +703,7 @@ function summary_table(providers, provider_link = true) {
   return `<table>
   <thead>
   <tr>
-    <th scope="col" style="text-align:left;width:38%">Hosting provider<br><span style="font-weight:400;color:#888">Deployment location</span></th>
+    <th scope="col" style="text-align:left;width:38%">Hosting provider</th>
     <th scope="col">Min<br><span style="font-weight:400;color:#888">ms</span></th>
     <th scope="col">P50<br><span style="font-weight:400;color:#888">ms</span></th>
     <th scope="col">P95<br><span style="font-weight:400;color:#888">ms</span></th>
@@ -771,6 +772,7 @@ write(join(out_dir, "index.html"), html_page({
   meta_desc: "Latency benchmark (tools/list response time) for remote MCP server hosting providers: Cloudflare Workers, Vercel, Netlify, Railway, Supabase, Fermyon, Val.town, Render. Measured from multiple locations worldwide, sorted by P50.",
   jsonld,
   body: `<h1>Remote MCP Server Hosting Provider Latency Benchmark</h1>
+<p class="subtitle">Measured every 30 minutes from ${Object.keys(origin_map).length} cities across 6 continents — no warm-up request.</p>
 ${llm_cta_block()}
 ${summary_table(stats_30d)}
 ${evaluated_but_excluded_block()}
