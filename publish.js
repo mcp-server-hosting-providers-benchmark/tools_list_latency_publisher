@@ -711,7 +711,7 @@ function summary_table(providers, provider_link = true, table_title = null) {
   ${table_title ? `<tr class="table-title"><th colspan="8">${table_title}</th></tr>` : ""}
   <tr>
     <th scope="col" style="text-align:left;width:30%">Hosting provider</th>
-    <th scope="col">Measurements</th>
+    <th scope="col">Runs</th>
     <th scope="col">Min<br><span style="font-weight:400;color:#888">ms</span></th>
     <th scope="col">P50<br><span style="font-weight:400;color:#888">ms</span></th>
     <th scope="col">P95<br><span style="font-weight:400;color:#888">ms</span></th>
