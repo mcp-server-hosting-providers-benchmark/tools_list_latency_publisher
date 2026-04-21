@@ -603,8 +603,6 @@ td:first-child{text-align:left}
 .llm-cta a{display:inline-block;margin-left:6px;padding:2px 8px;border-radius:4px;text-decoration:none;font-weight:600;font-size:11px}
 .llm-cta a.claude{background:#d97706;color:#fff}
 .llm-cta a.chatgpt{background:#10a37f;color:#fff}
-.llm-cta a.claude-txt{background:transparent;border:1px solid #d97706;color:#d97706}
-.llm-cta a.chatgpt-txt{background:transparent;border:1px solid #10a37f;color:#10a37f}
 .llm-cta a:hover{opacity:0.75}
 .llm-cta .fmt{font-size:10px;color:#999;margin-left:4px}
 `.trim();
@@ -618,20 +616,13 @@ function period_label(period) {
 }
 
 // LLM analysis CTA — prompt pré-rempli, l'utilisateur choisit quand l'envoyer
-// Deux lignes : JSON (filled) et Text (outline) pour permettre la comparaison directe.
 function llm_cta_block() {
   const prompt_json = `Fetch and analyze this remote MCP server hosting provider latency benchmark: ${SITE_URL}/llms.json\nWhich provider would you recommend and why? Answer in my language.`;
-  const prompt_txt  = `Fetch and analyze this remote MCP server hosting provider latency benchmark: ${SITE_URL}/llms-narrative.txt\nWhich provider would you recommend and why? Answer in my language.`;
   const enc_json = encodeURIComponent(prompt_json);
-  const enc_txt  = encodeURIComponent(prompt_txt);
   const globe = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`;
-  return `<p class="llm-cta">${globe} Analyser &middot; Analyze &middot; Analizar<br>
-  <span class="fmt">JSON</span>
+  return `<p class="llm-cta">${globe} Ask AI
   <a class="claude"      href="https://claude.ai/new?q=${enc_json}"  target="_blank" rel="noopener" data-track="cta-claude-json">Claude</a>
   <a class="chatgpt"     href="https://chatgpt.com/?q=${enc_json}"   target="_blank" rel="noopener" data-track="cta-chatgpt-json">ChatGPT</a>
-  &nbsp;&nbsp;<span class="fmt">Text</span>
-  <a class="claude-txt"  href="https://claude.ai/new?q=${enc_txt}"   target="_blank" rel="noopener" data-track="cta-claude-txt">Claude</a>
-  <a class="chatgpt-txt" href="https://chatgpt.com/?q=${enc_txt}"    target="_blank" rel="noopener" data-track="cta-chatgpt-txt">ChatGPT</a>
 </p>`;
 }
 
