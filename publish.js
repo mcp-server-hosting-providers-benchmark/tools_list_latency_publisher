@@ -571,7 +571,6 @@ body{font-family:system-ui,-apple-system,sans-serif;font-size:14px;color:#111;ba
 h1{font-size:17px;font-weight:700;line-height:1.3;margin-bottom:4px}
 .subtitle{font-size:12px;color:#555;margin-bottom:10px;line-height:1.5}
 .meta{font-size:11px;color:#666;margin-bottom:10px;line-height:1.6}
-.table-context{font-size:12px;color:#333;line-height:1.6;margin:10px 0 8px;padding:8px 10px;background:#f9f9f9;border-left:3px solid #bbb}
 .origins{font-size:12px;margin-bottom:14px}
 .origins a,.origins strong{margin-right:6px}
 .origins a{color:#0066cc;text-decoration:none}
@@ -579,6 +578,7 @@ table{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed}
 thead tr{background:#f5f5f5}
 th{padding:6px 4px;font-weight:600;font-size:11px;text-align:right;border-bottom:2px solid #ccc;vertical-align:bottom}
 th:first-child{text-align:left;width:38%}
+.table-title th{text-align:left!important;font-size:12px;color:#222;background:#eee;border-bottom:1px solid #ddd}
 td{padding:5px 4px;border-bottom:1px solid #eee;text-align:right;vertical-align:top}
 td:first-child{text-align:left}
 .pname{font-weight:600;font-size:13px}
@@ -685,21 +685,18 @@ function methodology_block(period, measurement_locations) {
 </div>`;
 }
 
-function summary_table(providers, provider_link = true) {
+function summary_table(providers, provider_link = true, table_title = null) {
   const rows = providers.map(p => {
     const lat = p.latency_ms;
     const name_cell = provider_link
       ? `<a href="${u(`/remote-mcp-server-hosting-provider/${p.slug}.html`)}">${p.display_name}</a>`
       : p.display_name;
-    const measurements_cell = p.runs_error > 0
-      ? `${p.n_runs}<span class="n">${p.runs_ok} ok</span>`
-      : String(p.n_runs);
     const err_cell = p.runs_error > 0
       ? `<span class="err">${fmt_errors(p)}</span>`
       : "—";
     return `<tr>
       <td><div class="pname">${name_cell}</div></td>
-      <td>${measurements_cell}</td>
+      <td>${p.n_runs}</td>
       <td>${fmt(lat?.min)}</td>
       <td>${fmt(lat?.p50)}</td>
       <td>${fmt(lat?.p95)}</td>
@@ -711,6 +708,7 @@ function summary_table(providers, provider_link = true) {
 
   return `<table>
   <thead>
+  ${table_title ? `<tr class="table-title"><th colspan="8">${table_title}</th></tr>` : ""}
   <tr>
     <th scope="col" style="text-align:left;width:30%">Hosting provider</th>
     <th scope="col">Measurements</th>
@@ -726,8 +724,9 @@ function summary_table(providers, provider_link = true) {
 </table>`;
 }
 
-function worldwide_table_context(period, measurement_locations) {
-  return `<p class="table-context"><strong>Worldwide latency table.</strong> Measurements from ${measurement_locations.length} cities across 6 continents. Period: ${period_label(period)}. The Measurements column shows the total number of measurements for each provider. Latency statistics use successful measurements only.</p>`;
+function worldwide_table_title(providers, period) {
+  const total_measurements = providers.reduce((sum, p) => sum + p.n_runs, 0);
+  return `Worldwide latency: 6 continents, ${total_measurements} measurements, ${period_label(period)}`;
 }
 
 function origins_nav(current_slug) {
@@ -788,8 +787,7 @@ write(join(out_dir, "index.html"), html_page({
   body: `<h1>Remote MCP Server Hosting Provider Latency Benchmark</h1>
 <p class="subtitle">Measured every 30 minutes from ${Object.keys(origin_map).length} cities across 6 continents — no warm-up request.</p>
 ${llm_cta_block()}
-${worldwide_table_context(period_30d, Object.values(origin_map))}
-${summary_table(stats_30d)}
+${summary_table(stats_30d, true, worldwide_table_title(stats_30d, period_30d))}
 ${evaluated_but_excluded_block()}
 ${methodology_block(period_30d, Object.values(origin_map))}
 <nav class="nav">
