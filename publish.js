@@ -683,7 +683,7 @@ function summary_table(providers, provider_link = true, table_title = null) {
       ? `<a href="${u(`/remote-mcp-server-hosting-provider/${p.slug}.html`)}">${p.display_name}</a>`
       : p.display_name;
     const err_cell = p.runs_error > 0
-      ? `<span class="err">${fmt_errors(p)}</span>`
+      ? `<span class="err">${p.runs_error}</span>`
       : "—";
     return `<tr>
       <td><div class="pname">${name_cell}</div></td>
