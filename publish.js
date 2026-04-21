@@ -571,6 +571,7 @@ body{font-family:system-ui,-apple-system,sans-serif;font-size:14px;color:#111;ba
 h1{font-size:17px;font-weight:700;line-height:1.3;margin-bottom:4px}
 .subtitle{font-size:12px;color:#555;margin-bottom:10px;line-height:1.5}
 .meta{font-size:11px;color:#666;margin-bottom:10px;line-height:1.6}
+.table-context{font-size:12px;color:#333;line-height:1.6;margin:10px 0 8px;padding:8px 10px;background:#f9f9f9;border-left:3px solid #bbb}
 .origins{font-size:12px;margin-bottom:14px}
 .origins a,.origins strong{margin-right:6px}
 .origins a{color:#0066cc;text-decoration:none}
@@ -609,6 +610,12 @@ td:first-child{text-align:left}
 `.trim();
 
 function fmt(v) { return (v === null || v === undefined) ? "—" : String(v); }
+
+function period_label(period) {
+  const from = period.from ? new Date(period.from).toLocaleDateString("en-GB", { day:"numeric", month:"short", year:"numeric" }) : "?";
+  const to   = period.to   ? new Date(period.to  ).toLocaleDateString("en-GB", { day:"numeric", month:"short", year:"numeric" }) : "?";
+  return `${from} – ${to}`;
+}
 
 // LLM analysis CTA — prompt pré-rempli, l'utilisateur choisit quand l'envoyer
 // Deux lignes : JSON (filled) et Text (outline) pour permettre la comparaison directe.
@@ -681,20 +688,22 @@ function methodology_block(period, measurement_locations) {
 function summary_table(providers, provider_link = true) {
   const rows = providers.map(p => {
     const lat = p.latency_ms;
-    const n   = p.n_runs;
-    const loc = provider_location_display(p.slug);
     const name_cell = provider_link
       ? `<a href="${u(`/remote-mcp-server-hosting-provider/${p.slug}.html`)}">${p.display_name}</a>`
       : p.display_name;
+    const measurements_cell = p.runs_error > 0
+      ? `${p.n_runs}<span class="n">${p.runs_ok} ok</span>`
+      : String(p.n_runs);
     const err_cell = p.runs_error > 0
       ? `<span class="err">${fmt_errors(p)}</span>`
       : "—";
     return `<tr>
       <td><div class="pname">${name_cell}</div></td>
+      <td>${measurements_cell}</td>
       <td>${fmt(lat?.min)}</td>
-      <td>${fmt(lat?.p50)}<span class="n">${n} runs</span></td>
-      <td>${fmt(lat?.p95)}<span class="n">${n} runs</span></td>
-      <td>${fmt(lat?.p99)}<span class="n">${n} runs</span></td>
+      <td>${fmt(lat?.p50)}</td>
+      <td>${fmt(lat?.p95)}</td>
+      <td>${fmt(lat?.p99)}</td>
       <td>${fmt(lat?.max)}</td>
       <td>${err_cell}</td>
     </tr>`;
@@ -703,17 +712,22 @@ function summary_table(providers, provider_link = true) {
   return `<table>
   <thead>
   <tr>
-    <th scope="col" style="text-align:left;width:38%">Hosting provider</th>
+    <th scope="col" style="text-align:left;width:30%">Hosting provider</th>
+    <th scope="col">Measurements</th>
     <th scope="col">Min<br><span style="font-weight:400;color:#888">ms</span></th>
     <th scope="col">P50<br><span style="font-weight:400;color:#888">ms</span></th>
     <th scope="col">P95<br><span style="font-weight:400;color:#888">ms</span></th>
     <th scope="col">P99<br><span style="font-weight:400;color:#888">ms</span></th>
     <th scope="col">Max<br><span style="font-weight:400;color:#888">ms</span></th>
-    <th scope="col">Timeout<br><span style="font-weight:400;color:#888">runs</span></th>
+    <th scope="col">Errors</th>
   </tr>
   </thead>
   <tbody>${rows}</tbody>
 </table>`;
+}
+
+function worldwide_table_context(period, measurement_locations) {
+  return `<p class="table-context"><strong>Worldwide latency table.</strong> Measurements from ${measurement_locations.length} cities across 6 continents. Period: ${period_label(period)}. The Measurements column shows the total number of measurements for each provider. Latency statistics use successful measurements only.</p>`;
 }
 
 function origins_nav(current_slug) {
@@ -774,6 +788,7 @@ write(join(out_dir, "index.html"), html_page({
   body: `<h1>Remote MCP Server Hosting Provider Latency Benchmark</h1>
 <p class="subtitle">Measured every 30 minutes from ${Object.keys(origin_map).length} cities across 6 continents — no warm-up request.</p>
 ${llm_cta_block()}
+${worldwide_table_context(period_30d, Object.values(origin_map))}
 ${summary_table(stats_30d)}
 ${evaluated_but_excluded_block()}
 ${methodology_block(period_30d, Object.values(origin_map))}
