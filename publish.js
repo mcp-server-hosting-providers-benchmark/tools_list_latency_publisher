@@ -785,7 +785,6 @@ write(join(out_dir, "index.html"), html_page({
   meta_desc: "Latency benchmark (tools/list response time) for remote MCP server hosting providers: Cloudflare Workers, Vercel, Netlify, Railway, Supabase, Fermyon, Val.town, Render. Measured from multiple locations worldwide, sorted by P50.",
   jsonld,
   body: `<h1>Remote MCP Server Hosting Provider Latency Benchmark</h1>
-<p class="subtitle">Measured every 30 minutes from ${Object.keys(origin_map).length} cities across 6 continents — no warm-up request.</p>
 ${llm_cta_block()}
 ${summary_table(stats_30d, true, worldwide_table_title(stats_30d, period_30d))}
 ${evaluated_but_excluded_block()}
