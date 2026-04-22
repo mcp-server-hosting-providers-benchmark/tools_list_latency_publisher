@@ -676,7 +676,7 @@ function methodology_block(period, measurement_locations) {
 </div>`;
 }
 
-function summary_table(providers, provider_link = true, table_title = null) {
+function summary_table(providers, provider_link = true, table_title = null, errors_header = "Errors") {
   const rows = providers.map(p => {
     const lat = p.latency_ms;
     const name_cell = provider_link
@@ -708,7 +708,7 @@ function summary_table(providers, provider_link = true, table_title = null) {
     <th scope="col">P95<br><span style="font-weight:400;color:#888">ms</span></th>
     <th scope="col">P99<br><span style="font-weight:400;color:#888">ms</span></th>
     <th scope="col">Max<br><span style="font-weight:400;color:#888">ms</span></th>
-    <th scope="col">Errors</th>
+    <th scope="col">${errors_header}</th>
   </tr>
   </thead>
   <tbody>${rows}</tbody>
@@ -777,7 +777,7 @@ write(join(out_dir, "index.html"), html_page({
   jsonld,
   body: `<h1>Remote MCP Server Hosting Provider Latency Benchmark</h1>
 ${llm_cta_block()}
-${summary_table(stats_30d, true, worldwide_table_title(stats_30d, period_30d))}
+${summary_table(stats_30d, true, worldwide_table_title(stats_30d, period_30d), "Err.")}
 ${evaluated_but_excluded_block()}
 ${methodology_block(period_30d, Object.values(origin_map))}
 <nav class="nav">
